@@ -1,0 +1,162 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\FabricStock;
+use App\Models\Ledger;
+use App\Models\Sale;
+use App\Models\SalesContract;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class SalesController extends Controller
+{
+    public function index(Request $request): View
+    {
+        $sales = Sale::with('contract')->latest('sale_date')->latest('id')->paginate(12);
+        $contracts = SalesContract::latest('start_date')->get();
+        $fabrics = FabricStock::where('current_stock_meters', '>', 0)->get();
+
+        // Metrics
+        $totalSalesCount = Sale::count();
+        $totalRevenue = Sale::sum('net_total');
+        $totalMetersSold = Sale::sum('meters_sold');
+        $contractSalesRevenue = Sale::where('sale_type', 'contract')->sum('net_total');
+        $openMarketRevenue = Sale::where('sale_type', 'open_market')->sum('net_total');
+
+        $activeContractsCount = SalesContract::where('status', 'active')->count();
+        $totalContractMetersAgreed = SalesContract::sum('total_meters');
+        $totalContractMetersDelivered = SalesContract::sum('delivered_meters');
+
+        return view('sales.index', compact(
+            'sales',
+            'contracts',
+            'fabrics',
+            'totalSalesCount',
+            'totalRevenue',
+            'totalMetersSold',
+            'contractSalesRevenue',
+            'openMarketRevenue',
+            'activeContractsCount',
+            'totalContractMetersAgreed',
+            'totalContractMetersDelivered'
+        ));
+    }
+
+    public function storeSale(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'slip_no' => 'required|string|max:100|unique:sales,slip_no',
+            'sale_type' => 'required|in:open_market,contract',
+            'sales_contract_id' => 'nullable|required_if:sale_type,contract|exists:sales_contracts,id',
+            'buyer_name' => 'required|string|max:150',
+            'buyer_phone' => 'nullable|string|max:50',
+            'fabric_quality' => 'required|string|max:150',
+            'meters_sold' => 'required|numeric|min:1',
+            'rolls_sold' => 'required|integer|min:1',
+            'rate_per_meter' => 'required|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0',
+            'payment_type' => 'required|in:cash,credit,bank_transfer',
+            'payment_status' => 'required|in:paid,partial,unpaid',
+            'sale_date' => 'required|date',
+            'vehicle_no' => 'nullable|string|max:50',
+            'notes' => 'nullable|string',
+        ]);
+
+        $subtotal = $validated['meters_sold'] * $validated['rate_per_meter'];
+        $discount = $validated['discount'] ?? 0;
+        $netTotal = max(0, $subtotal - $discount);
+
+        $validated['subtotal'] = $subtotal;
+        $validated['discount'] = $discount;
+        $validated['net_total'] = $netTotal;
+
+        // Stock and Contract deductions
+        $fabric = FabricStock::where('quality_name', $validated['fabric_quality'])->first();
+
+        if ($validated['sale_type'] === 'contract') {
+            $contract = SalesContract::findOrFail($validated['sales_contract_id']);
+
+            if ($contract->remaining_meters < $validated['meters_sold']) {
+                return back()->withInput()->with('error', "Cannot sell {$validated['meters_sold']}m against Contract {$contract->contract_no}. Remaining contract limit is {$contract->remaining_meters}m.");
+            }
+
+            $contract->increment('delivered_meters', $validated['meters_sold']);
+            $contract->decrement('remaining_meters', $validated['meters_sold']);
+
+            if ($contract->remaining_meters <= 0) {
+                $contract->update(['status' => 'completed']);
+            }
+
+            if ($fabric) {
+                $fabric->decrement('current_stock_meters', min($fabric->current_stock_meters, $validated['meters_sold']));
+                $fabric->decrement('committed_contract_meters', min($fabric->committed_contract_meters, $validated['meters_sold']));
+                $fabric->decrement('total_rolls_in_stock', min($fabric->total_rolls_in_stock, $validated['rolls_sold']));
+            }
+        } else {
+            // Open Market Sale
+            if ($fabric && $fabric->available_open_meters < $validated['meters_sold']) {
+                return back()->withInput()->with('error', "Insufficient open market stock for {$validated['fabric_quality']}. Available: {$fabric->available_open_meters}m.");
+            }
+
+            if ($fabric) {
+                $fabric->decrement('current_stock_meters', min($fabric->current_stock_meters, $validated['meters_sold']));
+                $fabric->decrement('available_open_meters', min($fabric->available_open_meters, $validated['meters_sold']));
+                $fabric->decrement('total_rolls_in_stock', min($fabric->total_rolls_in_stock, $validated['rolls_sold']));
+            }
+        }
+
+        $sale = Sale::create($validated);
+
+        // Record in Ledger
+        Ledger::create([
+            'party_name' => $sale->buyer_name,
+            'party_type' => 'fabric_buyer',
+            'transaction_date' => $sale->sale_date,
+            'voucher_no' => $sale->slip_no,
+            'description' => "Fabric Sale: {$sale->meters_sold}m {$sale->fabric_quality} ({$sale->sale_type})",
+            'debit' => $sale->net_total,
+            'credit' => $sale->payment_status === 'paid' ? $sale->net_total : 0.00,
+            'balance' => $sale->payment_status === 'paid' ? 0.00 : $sale->net_total,
+            'notes' => "Payment Type: {$sale->payment_type}, Status: {$sale->payment_status}",
+        ]);
+
+        return redirect()->route('sales.index')
+            ->with('success', "Sale Slip {$sale->slip_no} generated successfully! Total: Rs. ".number_format($sale->net_total, 2));
+    }
+
+    public function storeContract(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'contract_no' => 'required|string|max:100|unique:sales_contracts,contract_no',
+            'buyer_name' => 'required|string|max:150',
+            'buyer_phone' => 'nullable|string|max:50',
+            'fabric_quality' => 'required|string|max:150',
+            'total_meters' => 'required|numeric|min:100',
+            'rate_per_meter' => 'required|numeric|min:1',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'notes' => 'nullable|string',
+        ]);
+
+        $totalAmount = $validated['total_meters'] * $validated['rate_per_meter'];
+        $validated['total_amount'] = $totalAmount;
+        $validated['delivered_meters'] = 0;
+        $validated['remaining_meters'] = $validated['total_meters'];
+        $validated['status'] = 'active';
+
+        $contract = SalesContract::create($validated);
+
+        // Optionally reserve stock in fabric_stocks
+        $fabric = FabricStock::where('quality_name', $validated['fabric_quality'])->first();
+        if ($fabric) {
+            $reservable = min($fabric->available_open_meters, $validated['total_meters']);
+            $fabric->increment('committed_contract_meters', $reservable);
+            $fabric->decrement('available_open_meters', $reservable);
+        }
+
+        return redirect()->route('sales.index')
+            ->with('success', "Sales Contract {$contract->contract_no} for {$contract->buyer_name} ({$contract->total_meters}m) registered successfully!");
+    }
+}
