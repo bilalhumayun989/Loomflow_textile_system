@@ -6,23 +6,22 @@
 <div class="space-y-6">
 
     <!-- Header & Action Buttons -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-zinc-200">
         <div>
             <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
-                <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Module 05</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-zinc-700"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-zinc-500">Module 05</span>
             </div>
-            <h1 class="text-2xl font-black text-white tracking-tight">Sales & Contract Management</h1>
-            <p class="text-xs text-slate-400 mt-0.5">Generate sales slips for open market buyers and manage delivery schedules for long-term fabric contracts.</p>
+            <h1 class="text-2xl font-black text-zinc-900 tracking-tight">Sales & Contract Management</h1>
+            <p class="text-xs text-zinc-400 mt-0.5">Generate sales slips for open market buyers and manage delivery schedules for long-term fabric contracts.</p>
         </div>
-
         <div class="flex items-center gap-3">
-            <button type="button" onclick="openModal('modalNewSaleSlip')" class="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-blue-600/25 transition-all flex items-center gap-2">
+            <button type="button" onclick="openModal('modalNewSaleSlip')" class="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 font-extrabold text-xs shadow-sm transition-all flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 <span>+ Enter Sale Slip</span>
             </button>
-            <button type="button" onclick="openModal('modalNewContract')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+            <button type="button" onclick="openModal('modalNewContract')" class="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-300 text-xs font-bold transition-colors flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
                 <span>+ New Multi-Quality Contract</span>
             </button>
         </div>
@@ -30,59 +29,48 @@
 
     <!-- KPIs -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        <div class="glass-card rounded-2xl p-4 border border-blue-500/20 bg-blue-500/5">
-            <div class="text-[11px] font-bold uppercase tracking-wider text-blue-400 flex items-center justify-between">
-                <span>Total Net Sales</span>
-                <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+        <div class="glass-card rounded-2xl p-4 border border-zinc-300 bg-zinc-50">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-700 flex items-center justify-between">
+                <span>Total Net Sales</span><span class="w-2 h-2 rounded-full bg-zinc-600"></span>
             </div>
-            <div class="text-2xl font-black text-white mt-1 font-mono">Rs. {{ number_format($totalRevenue, 0) }}</div>
-            <div class="text-[11px] text-slate-400 mt-1">{{ number_format($totalMetersSold) }} meters fabric dispatched</div>
+            <div class="text-2xl font-black text-zinc-900 mt-1 font-mono">Rs. {{ number_format($totalRevenue, 0) }}</div>
+            <div class="text-[11px] text-zinc-500 mt-1">{{ number_format($totalMetersSold) }} meters fabric dispatched</div>
         </div>
-
-        <div class="glass-card rounded-2xl p-4 border border-indigo-500/20 bg-indigo-500/5">
-            <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-400 flex items-center justify-between">
-                <span>Contract Sales Revenue</span>
-                <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+        <div class="glass-card rounded-2xl p-4 border border-zinc-300 bg-zinc-50">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-700 flex items-center justify-between">
+                <span>Contract Sales Revenue</span><span class="w-2 h-2 rounded-full bg-zinc-600"></span>
             </div>
-            <div class="text-2xl font-black text-indigo-300 mt-1 font-mono">Rs. {{ number_format($contractSalesRevenue, 0) }}</div>
-            <div class="text-[11px] text-indigo-400/80 mt-1">From long-term contracts</div>
+            <div class="text-2xl font-black text-zinc-900 mt-1 font-mono">Rs. {{ number_format($contractSalesRevenue, 0) }}</div>
+            <div class="text-[11px] text-zinc-500 mt-1">From long-term contracts</div>
         </div>
-
-        <div class="glass-card rounded-2xl p-4 border border-emerald-500/20 bg-emerald-500/5">
-            <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center justify-between">
-                <span>Open Market Spot Sales</span>
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <div class="glass-card rounded-2xl p-4 border border-zinc-300 bg-zinc-50">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-700 flex items-center justify-between">
+                <span>Open Market Spot Sales</span><span class="w-2 h-2 rounded-full bg-zinc-600"></span>
             </div>
-            <div class="text-2xl font-black text-emerald-400 mt-1 font-mono">Rs. {{ number_format($openMarketRevenue, 0) }}</div>
-            <div class="text-[11px] text-emerald-400/80 mt-1">Spot market & cash sales</div>
+            <div class="text-2xl font-black text-zinc-900 mt-1 font-mono">Rs. {{ number_format($openMarketRevenue, 0) }}</div>
+            <div class="text-[11px] text-zinc-500 mt-1">Spot market & cash sales</div>
         </div>
-
-        <div class="glass-card rounded-2xl p-4 border border-slate-800">
-            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                <span>Active Contracts Progress</span>
-                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+        <div class="glass-card rounded-2xl p-4 border border-zinc-200">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
+                <span>Active Contracts Progress</span><span class="w-2 h-2 rounded-full bg-zinc-400"></span>
             </div>
-            <div class="text-2xl font-black text-cyan-400 mt-1">{{ $activeContractsCount }} <span class="text-xs font-normal text-slate-400">Active</span></div>
-            <div class="text-[11px] text-slate-400 mt-1">Delivered: {{ number_format($totalContractMetersDelivered) }}m / {{ number_format($totalContractMetersAgreed) }}m</div>
+            <div class="text-2xl font-black text-zinc-900 mt-1">{{ $activeContractsCount }} <span class="text-xs font-normal text-zinc-400">Active</span></div>
+            <div class="text-[11px] text-zinc-400 mt-1">Delivered: {{ number_format($totalContractMetersDelivered) }}m / {{ number_format($totalContractMetersAgreed) }}m</div>
         </div>
-
     </div>
 
-    <!-- TABS: 1. SALES SLIPS | 2. CONTRACTS MANAGER -->
-    <div class="glass-card rounded-3xl p-6 border border-slate-800">
+    <!-- TABS -->
+    <div class="glass-card rounded-3xl p-6 border border-zinc-200">
         <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-3">
-                <button type="button" onclick="switchSalesTab('tabSlips')" id="btnTabSlips" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-500 text-slate-950 shadow-md">
+                <button type="button" onclick="switchSalesTab('tabSlips')" id="btnTabSlips" class="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-900 text-zinc-50 shadow-sm">
                     1. Sales Slips & Invoices
                 </button>
-                <button type="button" onclick="switchSalesTab('tabContracts')" id="btnTabContracts" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:text-white">
+                <button type="button" onclick="switchSalesTab('tabContracts')" id="btnTabContracts" class="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-600 hover:bg-zinc-200">
                     2. Multi-Quality Contracts ({{ $contracts->count() }})
                 </button>
             </div>
-            <div class="text-xs text-slate-400 font-mono">
-                Total Slips: {{ $sales->total() }}
-            </div>
+            <div class="text-xs text-zinc-400 font-mono">Total Slips: {{ $sales->total() }}</div>
         </div>
 
         <!-- TAB 1: SALES SLIPS -->
@@ -90,177 +78,149 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
                     <thead>
-                        <tr class="border-b border-slate-800 text-slate-400 font-semibold uppercase text-[10px] tracking-wider bg-slate-950/40">
-                            <th class="p-3">Slip #</th>
-                            <th class="p-3">Date</th>
-                            <th class="p-3">Type</th>
-                            <th class="p-3">Buyer Name</th>
-                            <th class="p-3">Fabric Quality</th>
-                            <th class="p-3 text-right">Meters Sold</th>
-                            <th class="p-3 text-center">Rolls</th>
+                        <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
+                            <th class="p-3">Slip #</th><th class="p-3">Date</th><th class="p-3">Type</th>
+                            <th class="p-3">Buyer Name</th><th class="p-3">Fabric Quality</th>
+                            <th class="p-3 text-right">Meters Sold</th><th class="p-3 text-center">Rolls</th>
                             <th class="p-3 text-right">Rate / Meter</th>
-                            <th class="p-3 text-right font-black text-white">Net Total</th>
+                            <th class="p-3 text-right font-black text-zinc-900">Net Total</th>
                             <th class="p-3 text-center">Payment</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-800/60">
+                    <tbody class="divide-y divide-zinc-100">
                         @forelse($sales as $s)
-                            <tr class="hover:bg-slate-800/30 transition-colors">
-                                <td class="p-3 font-mono font-bold text-white">{{ $s->slip_no }}</td>
-                                <td class="p-3 text-slate-400 font-mono">{{ $s->sale_date->format('d M, Y') }}</td>
+                            <tr class="hover:bg-zinc-50 transition-colors">
+                                <td class="p-3 font-mono font-bold text-zinc-900">{{ $s->slip_no }}</td>
+                                <td class="p-3 text-zinc-500 font-mono">{{ $s->sale_date->format('d M, Y') }}</td>
                                 <td class="p-3">
                                     @if($s->sale_type === 'contract')
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                                            Contract ({{ $s->contract ? $s->contract->contract_no : 'Ref' }})
-                                        </span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200 text-zinc-700 border border-zinc-300">Contract ({{ $s->contract ? $s->contract->contract_no : 'Ref' }})</span>
                                     @else
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                            Open Market
-                                        </span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">Open Market</span>
                                     @endif
                                 </td>
-                                <td class="p-3 font-bold text-slate-200">{{ $s->buyer_name }}</td>
-                                <td class="p-3 text-slate-300">{{ $s->fabric_quality }}</td>
-                                <td class="p-3 text-right font-mono font-bold text-white text-sm">{{ number_format($s->meters_sold, 0) }}m</td>
-                                <td class="p-3 text-center font-mono font-semibold text-slate-300">{{ $s->rolls_sold }}</td>
-                                <td class="p-3 text-right font-mono text-slate-400">Rs. {{ number_format($s->rate_per_meter, 2) }}</td>
-                                <td class="p-3 text-right font-mono font-black text-blue-400 text-sm">Rs. {{ number_format($s->net_total, 2) }}</td>
+                                <td class="p-3 font-bold text-zinc-800">{{ $s->buyer_name }}</td>
+                                <td class="p-3 text-zinc-600">{{ $s->fabric_quality }}</td>
+                                <td class="p-3 text-right font-mono font-bold text-zinc-900 text-sm">{{ number_format($s->meters_sold, 0) }}m</td>
+                                <td class="p-3 text-center font-mono font-semibold text-zinc-600">{{ $s->rolls_sold }}</td>
+                                <td class="p-3 text-right font-mono text-zinc-500">Rs. {{ number_format($s->rate_per_meter, 2) }}</td>
+                                <td class="p-3 text-right font-mono font-black text-zinc-900 text-sm">Rs. {{ number_format($s->net_total, 2) }}</td>
                                 <td class="p-3 text-center">
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase {{ $s->payment_status === 'paid' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300' }}">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase {{ $s->payment_status === 'paid' ? 'bg-zinc-200 text-zinc-700' : 'bg-zinc-100 text-zinc-500' }}">
                                         {{ $s->payment_status }} ({{ $s->payment_type }})
                                     </span>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="10" class="p-6 text-center text-slate-500">No sales slips entered yet. Click "+ Enter Sale Slip" to create one.</td>
-                            </tr>
+                            <tr><td colspan="10" class="p-6 text-center text-zinc-400">No sales slips entered yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-            <div class="mt-4">
-                {{ $sales->links() }}
-            </div>
+            <div class="mt-4">{{ $sales->links() }}</div>
         </div>
 
         <!-- TAB 2: CONTRACTS -->
         <div id="tabContracts" class="hidden">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @forelse($contracts as $cnt)
-                    @php
-                        $percentage = $cnt->total_meters > 0 ? min(100, round(($cnt->delivered_meters / $cnt->total_meters) * 100)) : 0;
-                    @endphp
-                    <div class="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+                    @php $percentage = $cnt->total_meters > 0 ? min(100, round(($cnt->delivered_meters / $cnt->total_meters) * 100)) : 0; @endphp
+                    <div class="p-5 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-3">
                         <div class="flex items-start justify-between">
                             <div>
-                                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">{{ $cnt->contract_no }}</span>
-                                <h4 class="text-base font-extrabold text-white mt-1">{{ $cnt->buyer_name }}</h4>
-                                <div class="text-xs text-slate-400">{{ $cnt->fabric_quality }}</div>
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-zinc-200 text-zinc-800 border border-zinc-300">{{ $cnt->contract_no }}</span>
+                                <h4 class="text-base font-extrabold text-zinc-900 mt-1">{{ $cnt->buyer_name }}</h4>
+                                <div class="text-xs text-zinc-500">{{ $cnt->fabric_quality }}</div>
                             </div>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase {{ $cnt->status === 'active' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-300' }}">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase {{ $cnt->status === 'active' ? 'bg-zinc-900 text-zinc-50' : 'bg-zinc-200 text-zinc-600' }}">
                                 {{ $cnt->status }}
                             </span>
                         </div>
-
-                        <!-- Progress Bar -->
                         <div>
                             <div class="flex justify-between text-xs mb-1 font-semibold">
-                                <span class="text-slate-400">Delivery Progress</span>
-                                <span class="text-indigo-400 font-mono">{{ $percentage }}% ({{ number_format($cnt->delivered_meters) }} / {{ number_format($cnt->total_meters) }}m)</span>
+                                <span class="text-zinc-500">Delivery Progress</span>
+                                <span class="text-zinc-700 font-mono">{{ $percentage }}% ({{ number_format($cnt->delivered_meters) }} / {{ number_format($cnt->total_meters) }}m)</span>
                             </div>
-                            <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                                <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2.5 rounded-full transition-all" style="width: {{ $percentage }}%"></div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800 text-xs">
-                            <div>
-                                <span class="text-[10px] text-slate-500 uppercase block">Remaining</span>
-                                <strong class="text-amber-400 font-mono">{{ number_format($cnt->remaining_meters) }}m</strong>
-                            </div>
-                            <div>
-                                <span class="text-[10px] text-slate-500 uppercase block">Agreed Rate</span>
-                                <strong class="text-white font-mono">Rs. {{ $cnt->rate_per_meter }}/m</strong>
-                            </div>
-                            <div>
-                                <span class="text-[10px] text-slate-500 uppercase block">Contract Value</span>
-                                <strong class="text-emerald-400 font-mono">Rs. {{ number_format($cnt->total_amount, 0) }}</strong>
+                            <div class="w-full bg-zinc-200 rounded-full h-2.5 overflow-hidden">
+                                <div class="bg-zinc-800 h-2.5 rounded-full transition-all" style="width: {{ $percentage }}%"></div>
                             </div>
                         </div>
-
+                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-200 text-xs">
+                            <div>
+                                <span class="text-[10px] text-zinc-400 uppercase block">Remaining</span>
+                                <strong class="text-zinc-800 font-mono">{{ number_format($cnt->remaining_meters) }}m</strong>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-zinc-400 uppercase block">Agreed Rate</span>
+                                <strong class="text-zinc-900 font-mono">Rs. {{ $cnt->rate_per_meter }}/m</strong>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-zinc-400 uppercase block">Contract Value</span>
+                                <strong class="text-zinc-900 font-mono">Rs. {{ number_format($cnt->total_amount, 0) }}</strong>
+                            </div>
+                        </div>
                         @if($cnt->notes)
-                            <div class="text-[11px] text-slate-500 italic bg-slate-900/80 p-2 rounded-xl">
-                                {{ $cnt->notes }}
-                            </div>
+                            <div class="text-[11px] text-zinc-500 italic bg-zinc-100 p-2 rounded-xl">{{ $cnt->notes }}</div>
                         @endif
                     </div>
                 @empty
-                    <p class="text-xs text-slate-500 col-span-2">No buyer contracts registered yet. Click "+ New Multi-Quality Contract" to create one.</p>
+                    <p class="text-xs text-zinc-400 col-span-2">No buyer contracts registered yet.</p>
                 @endforelse
             </div>
         </div>
-
     </div>
 
 </div>
 
-<!-- MODAL 1: ENTER SALE SLIP (OPEN MARKET OR CONTRACT) -->
-<div id="modalNewSaleSlip" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-xl w-full p-6 shadow-2xl relative my-8">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+<!-- MODAL 1: ENTER SALE SLIP -->
+<div id="modalNewSaleSlip" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white border border-zinc-200 rounded-3xl max-w-xl w-full p-6 shadow-xl relative my-8">
+        <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
             <div>
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+                <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-zinc-700"></span>
                     Enter Sales Slip
                 </h3>
-                <p class="text-xs text-slate-400">Sell fabric openly in spot market or dispatch under buyer contract</p>
+                <p class="text-xs text-zinc-400">Sell fabric openly in spot market or dispatch under buyer contract</p>
             </div>
-            <button type="button" onclick="closeModal('modalNewSaleSlip')" class="text-slate-400 hover:text-white p-1">
+            <button type="button" onclick="closeModal('modalNewSaleSlip')" class="text-zinc-400 hover:text-zinc-900 p-1">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
-
         <form action="{{ route('sales.store') }}" method="POST" class="mt-4 space-y-4">
             @csrf
-
-            <!-- SALE TYPE TOGGLE -->
             <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Sale Dispatch Type *</label>
+                <label class="block text-xs font-semibold text-zinc-600 mb-1.5">Sale Dispatch Type *</label>
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="flex items-center gap-2 p-3 rounded-2xl bg-slate-950 border border-slate-700 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-500/10">
-                        <input type="radio" name="sale_type" value="open_market" checked onchange="handleSaleTypeChange()" class="text-blue-500 focus:ring-blue-500">
+                    <label class="flex items-center gap-2 p-3 rounded-2xl bg-zinc-50 border border-zinc-300 cursor-pointer has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-100">
+                        <input type="radio" name="sale_type" value="open_market" checked onchange="handleSaleTypeChange()" class="text-zinc-800 focus:ring-zinc-500">
                         <div>
-                            <span class="block text-xs font-bold text-white">Open Market Sale</span>
-                            <span class="block text-[10px] text-slate-400">Spot sale ex-factory store</span>
+                            <span class="block text-xs font-bold text-zinc-900">Open Market Sale</span>
+                            <span class="block text-[10px] text-zinc-400">Spot sale ex-factory store</span>
                         </div>
                     </label>
-
-                    <label class="flex items-center gap-2 p-3 rounded-2xl bg-slate-950 border border-slate-700 cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/10">
-                        <input type="radio" name="sale_type" value="contract" onchange="handleSaleTypeChange()" class="text-indigo-500 focus:ring-indigo-500">
+                    <label class="flex items-center gap-2 p-3 rounded-2xl bg-zinc-50 border border-zinc-300 cursor-pointer has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-100">
+                        <input type="radio" name="sale_type" value="contract" onchange="handleSaleTypeChange()" class="text-zinc-800 focus:ring-zinc-500">
                         <div>
-                            <span class="block text-xs font-bold text-white">Contract Sale</span>
-                            <span class="block text-[10px] text-slate-400">Under registered party contract</span>
+                            <span class="block text-xs font-bold text-zinc-900">Contract Sale</span>
+                            <span class="block text-[10px] text-zinc-400">Under registered party contract</span>
                         </div>
                     </label>
                 </div>
             </div>
-
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Slip / Invoice # *</label>
-                    <input type="text" name="slip_no" required placeholder="e.g. SLIP-9025" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Slip / Invoice # *</label>
+                    <input type="text" name="slip_no" required placeholder="e.g. SLIP-9025" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Sale Date *</label>
-                    <input type="date" name="sale_date" required value="{{ date('Y-m-d') }}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Sale Date *</label>
+                    <input type="date" name="sale_date" required value="{{ date('Y-m-d') }}" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
             </div>
-
-            <!-- CONTRACT SELECTOR (Only shown if contract is selected) -->
             <div id="contractSelectContainer" class="hidden">
-                <label class="block text-xs font-semibold text-indigo-400 mb-1">Select Active Contract *</label>
-                <select name="sales_contract_id" id="selectContract" onchange="handleContractSelected()" class="w-full bg-slate-950 border border-indigo-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-xs font-semibold text-zinc-700 mb-1">Select Active Contract *</label>
+                <select name="sales_contract_id" id="selectContract" onchange="handleContractSelected()" class="w-full bg-zinc-50 border border-zinc-400 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-600">
                     <option value="">-- Choose Contract --</option>
                     @foreach($contracts->where('status', 'active') as $c)
                         <option value="{{ $c->id }}" data-buyer="{{ $c->buyer_name }}" data-phone="{{ $c->buyer_phone }}" data-quality="{{ $c->fabric_quality }}" data-rate="{{ $c->rate_per_meter }}" data-remaining="{{ $c->remaining_meters }}">
@@ -269,58 +229,52 @@
                     @endforeach
                 </select>
             </div>
-
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Buyer / Party Name *</label>
-                    <input type="text" id="inpBuyerName" name="buyer_name" required placeholder="e.g. Haji Cloth Merchant" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Buyer / Party Name *</label>
+                    <input type="text" id="inpBuyerName" name="buyer_name" required placeholder="e.g. Haji Cloth Merchant" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Buyer Phone</label>
-                    <input type="text" id="inpBuyerPhone" name="buyer_phone" placeholder="e.g. +92 300 1234567" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Buyer Phone</label>
+                    <input type="text" id="inpBuyerPhone" name="buyer_phone" placeholder="e.g. +92 300 1234567" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
             </div>
-
             <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Fabric Quality *</label>
-                <select name="fabric_quality" id="selectFabricQuality" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <label class="block text-xs font-semibold text-zinc-600 mb-1">Fabric Quality *</label>
+                <select name="fabric_quality" id="selectFabricQuality" required class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     @foreach($fabrics as $f)
-                        <option value="{{ $f->quality_name }}">
-                            {{ $f->quality_name }} (Open Stock: {{ number_format($f->available_open_meters) }}m)
-                        </option>
+                        <option value="{{ $f->quality_name }}">{{ $f->quality_name }} (Open Stock: {{ number_format($f->available_open_meters) }}m)</option>
                     @endforeach
                 </select>
             </div>
-
             <div class="grid grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Meters Sold *</label>
-                    <input type="number" step="0.01" id="inpMetersSold" name="meters_sold" required min="1" placeholder="1000" oninput="calculateSaleNet()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Meters Sold *</label>
+                    <input type="number" step="0.01" id="inpMetersSold" name="meters_sold" required min="1" placeholder="1000" oninput="calculateSaleNet()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Rolls Count *</label>
-                    <input type="number" name="rolls_sold" required min="1" value="10" placeholder="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Rolls Count *</label>
+                    <input type="number" name="rolls_sold" required min="1" value="10" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Rate / Meter *</label>
-                    <input type="number" step="0.01" id="inpSaleRate" name="rate_per_meter" required min="1" placeholder="235" oninput="calculateSaleNet()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Rate / Meter *</label>
+                    <input type="number" step="0.01" id="inpSaleRate" name="rate_per_meter" required min="1" placeholder="235" oninput="calculateSaleNet()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
             </div>
-
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Discount (Rs.)</label>
-                    <input type="number" step="0.01" id="inpDiscount" name="discount" value="0" min="0" oninput="calculateSaleNet()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Discount (Rs.)</label>
+                    <input type="number" step="0.01" id="inpDiscount" name="discount" value="0" min="0" oninput="calculateSaleNet()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Payment Method & Status *</label>
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Payment Method & Status *</label>
                     <div class="grid grid-cols-2 gap-2">
-                        <select name="payment_type" class="bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs text-white">
+                        <select name="payment_type" class="bg-zinc-50 border border-zinc-300 rounded-xl px-2 py-2 text-xs text-zinc-900">
                             <option value="credit">Credit</option>
                             <option value="cash">Cash</option>
                             <option value="bank_transfer">Bank</option>
                         </select>
-                        <select name="payment_status" class="bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs text-white">
+                        <select name="payment_status" class="bg-zinc-50 border border-zinc-300 rounded-xl px-2 py-2 text-xs text-zinc-900">
                             <option value="paid">Paid</option>
                             <option value="partial">Partial</option>
                             <option value="unpaid">Unpaid</option>
@@ -328,100 +282,88 @@
                     </div>
                 </div>
             </div>
-
-            <!-- CALCULATED NET TOTAL BAR -->
-            <div class="p-3.5 rounded-2xl bg-blue-950/40 border border-blue-800/40 flex items-center justify-between text-xs">
+            <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 flex items-center justify-between text-xs">
                 <div>
-                    <span class="text-slate-400 block text-[11px]">Subtotal: <span id="displaySubtotal" class="font-mono text-slate-300">Rs. 0.00</span></span>
-                    <span class="text-blue-300 font-bold">Net Total Amount:</span>
+                    <span class="text-zinc-400 block text-[11px]">Subtotal: <span id="displaySubtotal" class="font-mono text-zinc-600">Rs. 0.00</span></span>
+                    <span class="text-zinc-700 font-bold">Net Total Amount:</span>
                 </div>
-                <strong id="displayNetTotal" class="font-mono text-lg font-black text-blue-400">Rs. 0.00</strong>
+                <strong id="displayNetTotal" class="font-mono text-lg font-black text-zinc-900">Rs. 0.00</strong>
             </div>
-
             <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Vehicle # / Gate Pass Notes</label>
-                <input type="text" name="vehicle_no" placeholder="e.g. Truck LEA-4491, Gate Pass #GP-88" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <label class="block text-xs font-semibold text-zinc-600 mb-1">Vehicle # / Gate Pass Notes</label>
+                <input type="text" name="vehicle_no" placeholder="e.g. Truck LEA-4491, Gate Pass #GP-88" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
             </div>
-
-            <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
-                <button type="button" onclick="closeModal('modalNewSaleSlip')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
-                <button type="submit" class="px-5 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-black shadow-lg shadow-blue-500/20">Generate Sales Slip</button>
+            <div class="pt-3 border-t border-zinc-100 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('modalNewSaleSlip')" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-600 text-xs font-semibold">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 text-xs font-black shadow-sm">Generate Sales Slip</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- MODAL 2: NEW MULTI-QUALITY CONTRACT REGISTRATION -->
-<div id="modalNewContract" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative my-8">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+<!-- MODAL 2: NEW CONTRACT -->
+<div id="modalNewContract" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white border border-zinc-200 rounded-3xl max-w-lg w-full p-6 shadow-xl relative my-8">
+        <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
+            <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-zinc-600"></span>
                 Register Multi-Quality Contract
             </h3>
-            <button type="button" onclick="closeModal('modalNewContract')" class="text-slate-400 hover:text-white p-1">
+            <button type="button" onclick="closeModal('modalNewContract')" class="text-zinc-400 hover:text-zinc-900 p-1">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
-
         <form action="{{ route('sales.contract.store') }}" method="POST" class="mt-4 space-y-4">
             @csrf
-
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Contract # *</label>
-                    <input type="text" name="contract_no" required placeholder="e.g. CNT-2026-045" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Contract # *</label>
+                    <input type="text" name="contract_no" required placeholder="e.g. CNT-2026-045" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Start Date *</label>
-                    <input type="date" name="start_date" required value="{{ date('Y-m-d') }}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Start Date *</label>
+                    <input type="date" name="start_date" required value="{{ date('Y-m-d') }}" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
             </div>
-
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Buyer / Mill Name *</label>
-                    <input type="text" name="buyer_name" required placeholder="e.g. Crescent Garments Ltd" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Buyer / Mill Name *</label>
+                    <input type="text" name="buyer_name" required placeholder="e.g. Crescent Garments Ltd" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Buyer Phone</label>
-                    <input type="text" name="buyer_phone" placeholder="e.g. +92 321 4455667" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Buyer Phone</label>
+                    <input type="text" name="buyer_phone" placeholder="e.g. +92 321 4455667" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
             </div>
-
             <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Fabric Quality *</label>
-                <select name="fabric_quality" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-xs font-semibold text-zinc-600 mb-1">Fabric Quality *</label>
+                <select name="fabric_quality" required class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     @foreach($fabrics as $f)
                         <option value="{{ $f->quality_name }}">{{ $f->quality_name }}</option>
                     @endforeach
                 </select>
             </div>
-
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Total Agreed Meters *</label>
-                    <input type="number" step="0.01" name="total_meters" required min="100" placeholder="10000" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Agreed Meters *</label>
+                    <input type="number" step="0.01" name="total_meters" required min="100" placeholder="10000" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Rate Per Meter (Rs.) *</label>
-                    <input type="number" step="0.01" name="rate_per_meter" required min="1" placeholder="290" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Rate Per Meter (Rs.) *</label>
+                    <input type="number" step="0.01" name="rate_per_meter" required min="1" placeholder="290" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
             </div>
-
             <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Expiry / Completion Deadline</label>
-                <input type="date" name="end_date" value="{{ date('Y-m-d', strtotime('+30 days')) }}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-xs font-semibold text-zinc-600 mb-1">Expiry / Completion Deadline</label>
+                <input type="date" name="end_date" value="{{ date('Y-m-d', strtotime('+30 days')) }}" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
             </div>
-
             <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Delivery Terms / Notes</label>
-                <input type="text" name="notes" placeholder="e.g. Bi-weekly delivery of 2,500m per lot" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-xs font-semibold text-zinc-600 mb-1">Delivery Terms / Notes</label>
+                <input type="text" name="notes" placeholder="e.g. Bi-weekly delivery of 2,500m per lot" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
             </div>
-
-            <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
-                <button type="button" onclick="closeModal('modalNewContract')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
-                <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold shadow-lg shadow-indigo-500/20">Register Contract</button>
+            <div class="pt-3 border-t border-zinc-100 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('modalNewContract')" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-600 text-xs font-semibold">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 text-xs font-bold shadow-sm">Register Contract</button>
             </div>
         </form>
     </div>
@@ -430,29 +372,19 @@
 @push('scripts')
 <script>
     function switchSalesTab(tabId) {
-        document.getElementById('tabSlips').classList.add('hidden');
-        document.getElementById('tabContracts').classList.add('hidden');
-
-        document.getElementById('btnTabSlips').className = 'px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:text-white';
-        document.getElementById('btnTabContracts').className = 'px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:text-white';
-
+        ['tabSlips','tabContracts'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        ['btnTabSlips','btnTabContracts'].forEach(id => {
+            document.getElementById(id).className = 'px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-600 hover:bg-zinc-200';
+        });
         document.getElementById(tabId).classList.remove('hidden');
-
-        if (tabId === 'tabSlips') {
-            document.getElementById('btnTabSlips').className = 'px-4 py-2 rounded-xl text-xs font-bold bg-blue-500 text-slate-950 shadow-md';
-        } else {
-            document.getElementById('btnTabContracts').className = 'px-4 py-2 rounded-xl text-xs font-bold bg-blue-500 text-slate-950 shadow-md';
-        }
+        const btnMap = {tabSlips:'btnTabSlips', tabContracts:'btnTabContracts'};
+        document.getElementById(btnMap[tabId]).className = 'px-4 py-2 rounded-xl text-xs font-bold bg-zinc-900 text-zinc-50 shadow-sm';
     }
 
     function handleSaleTypeChange() {
         const selected = document.querySelector('input[name="sale_type"]:checked').value;
         const contractContainer = document.getElementById('contractSelectContainer');
-        if (selected === 'contract') {
-            contractContainer.classList.remove('hidden');
-        } else {
-            contractContainer.classList.add('hidden');
-        }
+        selected === 'contract' ? contractContainer.classList.remove('hidden') : contractContainer.classList.add('hidden');
     }
 
     function handleContractSelected() {
@@ -462,13 +394,9 @@
             document.getElementById('inpBuyerName').value = opt.dataset.buyer || '';
             document.getElementById('inpBuyerPhone').value = opt.dataset.phone || '';
             document.getElementById('inpSaleRate').value = opt.dataset.rate || '';
-            
             const qualitySelect = document.getElementById('selectFabricQuality');
             for (let i = 0; i < qualitySelect.options.length; i++) {
-                if (qualitySelect.options[i].value === opt.dataset.quality) {
-                    qualitySelect.selectedIndex = i;
-                    break;
-                }
+                if (qualitySelect.options[i].value === opt.dataset.quality) { qualitySelect.selectedIndex = i; break; }
             }
             calculateSaleNet();
         }
@@ -478,10 +406,8 @@
         const meters = parseFloat(document.getElementById('inpMetersSold').value) || 0;
         const rate = parseFloat(document.getElementById('inpSaleRate').value) || 0;
         const discount = parseFloat(document.getElementById('inpDiscount').value) || 0;
-
         const subtotal = meters * rate;
         const net = Math.max(0, subtotal - discount);
-
         document.getElementById('displaySubtotal').innerText = 'Rs. ' + subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
         document.getElementById('displayNetTotal').innerText = 'Rs. ' + net.toLocaleString('en-US', {minimumFractionDigits: 2});
     }
