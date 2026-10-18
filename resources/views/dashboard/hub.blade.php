@@ -3,78 +3,17 @@
 @section('title', 'Main Operations Hub')
 
 @section('content')
-<div class="space-y-8">
+<div class="space-y-6">
     
-    <!-- Top Welcome Banner & Shift Stats -->
-    <div class="relative overflow-hidden rounded-3xl bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm">
-        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-300 text-zinc-600 text-xs font-semibold mb-3">
-                    <span class="w-2 h-2 rounded-full bg-zinc-500 animate-pulse"></span>
-                    Weaving Floor Status: Active &bull; {{ date('l, d M Y') }}
-                </div>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">
-                    Welcome back, {{ Auth::user()->name }}
-                </h1>
-                <p class="text-sm text-zinc-500 mt-1 max-w-2xl">
-                    Select any operation box below to manage yarn bags, sizing beam preparation, spare parts store, finished fabric, sales slips, and loom-wise production efficiency.
-                </p>
-            </div>
-
-            <div class="flex items-center gap-3">
-                <a href="{{ route('production.index') }}" class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 font-bold text-xs shadow-sm transition-all flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    <span>Record Production</span>
-                </a>
-                <a href="{{ route('bags.index') }}" class="px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-300 font-bold text-xs transition-colors flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                    <span>New Yarn Purchase</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- Quick Summary Ribbon -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mt-6 pt-6 border-t border-zinc-100">
-            <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-200">
-                <div class="text-[10px] uppercase font-bold text-zinc-500">Factory Yarn Store</div>
-                <div class="text-lg font-black text-zinc-900 mt-0.5">{{ number_format($factoryBagStock) }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
-            </div>
-            <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-200">
-                <div class="text-[10px] uppercase font-bold text-zinc-500">Sizing Persons Stock</div>
-                <div class="text-lg font-black text-zinc-900 mt-0.5">{{ number_format($sizingBagsInHand) }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
-            </div>
-            <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-200">
-                <div class="text-[10px] uppercase font-bold text-zinc-500">Looms Mounted Beams</div>
-                <div class="text-lg font-black text-zinc-900 mt-0.5">{{ $activeBeamsCount }} <span class="text-xs font-normal text-zinc-400">active</span></div>
-            </div>
-            <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-200">
-                <div class="text-[10px] uppercase font-bold text-zinc-500">Fabric In Stock</div>
-                <div class="text-lg font-black text-zinc-900 mt-0.5">{{ number_format($totalFabricStockMeters) }} <span class="text-xs font-normal text-zinc-400">meters</span></div>
-            </div>
-            <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-200">
-                <div class="text-[10px] uppercase font-bold text-zinc-500">Open Sale Ready</div>
-                <div class="text-lg font-black text-zinc-900 mt-0.5">{{ number_format($openFabricMeters) }} <span class="text-xs font-normal text-zinc-400">meters</span></div>
-            </div>
-            <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-200">
-                <div class="text-[10px] uppercase font-bold text-zinc-500">Avg Efficiency</div>
-                <div class="text-lg font-black text-zinc-900 mt-0.5">{{ $avgEfficiency }}%</div>
-            </div>
-        </div>
+    <!-- Welcome heading -->
+    <div class="rounded-3xl bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">
+            Welcome back, {{ Auth::user()->name }}
+        </h1>
     </div>
 
     <!-- THE 6 MAIN BOXES -->
     <div>
-        <div class="flex items-center justify-between mb-4">
-            <div>
-                <h2 class="text-lg font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-zinc-700"></span>
-                    Core Operation Modules (6 Boxes)
-                </h2>
-                <p class="text-xs text-zinc-400">Click any box to open its dedicated workbench, forms, and logs</p>
-            </div>
-            <div class="text-xs text-zinc-400 font-mono">Click box to launch &rarr;</div>
-        </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
             <!-- BOX 1: BAGS -->
@@ -270,97 +209,6 @@
             </a>
 
         </div>
-    </div>
-
-    <!-- Live Recent Operations Activity Log -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Recent Bag Purchases -->
-        <div class="glass-card rounded-3xl p-5 border border-zinc-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-bold text-zinc-800 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-zinc-600"></span>
-                    Recent Yarn Purchases
-                </h3>
-                <a href="{{ route('bags.index') }}" class="text-[11px] text-zinc-500 hover:text-zinc-900 hover:underline">View All &rarr;</a>
-            </div>
-            <div class="space-y-3">
-                @forelse($recentPurchases as $purchase)
-                    <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-between text-xs">
-                        <div>
-                            <div class="font-bold text-zinc-900">{{ $purchase->challan_no }} &bull; {{ $purchase->quality }}</div>
-                            <div class="text-[11px] text-zinc-500">{{ $purchase->supplier_name }}</div>
-                            <div class="text-[10px] text-zinc-400 mt-0.5">Split: <span class="text-zinc-700 font-semibold">{{ $purchase->bags_to_sizing }} Sizing</span> / <span class="text-zinc-700 font-semibold">{{ $purchase->bags_to_factory }} Factory</span></div>
-                        </div>
-                        <div class="text-right">
-                            <span class="font-mono font-bold text-zinc-800">{{ $purchase->total_bags }} Bags</span>
-                            <span class="block text-[10px] text-zinc-400">{{ $purchase->purchase_date->format('d M') }}</span>
-                        </div>
-                    </div>
-                @empty
-                    <p class="text-xs text-zinc-400">No yarn purchases recorded yet.</p>
-                @endforelse
-            </div>
-        </div>
-
-        <!-- Recent Loom Production -->
-        <div class="glass-card rounded-3xl p-5 border border-zinc-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-bold text-zinc-800 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-zinc-600"></span>
-                    Recent Loom Production
-                </h3>
-                <a href="{{ route('production.index') }}" class="text-[11px] text-zinc-500 hover:text-zinc-900 hover:underline">View All &rarr;</a>
-            </div>
-            <div class="space-y-3">
-                @forelse($recentProductions as $prod)
-                    <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-between text-xs">
-                        <div>
-                            <div class="font-bold text-zinc-900">{{ $prod->loom_no }} &bull; {{ $prod->shift }} Shift</div>
-                            <div class="text-[11px] text-zinc-500">{{ $prod->operator_name }} &bull; {{ $prod->fabric_quality }}</div>
-                            <div class="text-[10px] text-zinc-500 mt-0.5">Leakage: {{ $prod->leakage_waste_meters }}m ({{ $prod->leakage_percentage }}%)</div>
-                        </div>
-                        <div class="text-right">
-                            <span class="font-mono font-bold text-zinc-800">+{{ $prod->net_meters_produced }}m</span>
-                            <span class="block text-[10px] text-zinc-500 font-semibold">{{ $prod->efficiency_percentage }}% Eff.</span>
-                        </div>
-                    </div>
-                @empty
-                    <p class="text-xs text-zinc-400">No shift productions recorded yet.</p>
-                @endforelse
-            </div>
-        </div>
-
-        <!-- Recent Sales Slips -->
-        <div class="glass-card rounded-3xl p-5 border border-zinc-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-bold text-zinc-800 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-zinc-600"></span>
-                    Recent Sales Slips
-                </h3>
-                <a href="{{ route('sales.index') }}" class="text-[11px] text-zinc-500 hover:text-zinc-900 hover:underline">View All &rarr;</a>
-            </div>
-            <div class="space-y-3">
-                @forelse($recentSales as $sale)
-                    <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-between text-xs">
-                        <div>
-                            <div class="font-bold text-zinc-900">{{ $sale->slip_no }} &bull; {{ $sale->buyer_name }}</div>
-                            <div class="text-[11px] text-zinc-500">{{ $sale->meters_sold }}m ({{ $sale->rolls_sold }} Rolls)</div>
-                            <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase mt-1 bg-zinc-200 text-zinc-700">
-                                {{ $sale->sale_type }}
-                            </span>
-                        </div>
-                        <div class="text-right">
-                            <span class="font-mono font-bold text-zinc-800">Rs. {{ number_format($sale->net_total, 0) }}</span>
-                            <span class="block text-[10px] text-zinc-500 font-semibold uppercase">{{ $sale->payment_status }}</span>
-                        </div>
-                    </div>
-                @empty
-                    <p class="text-xs text-zinc-400">No sales slips entered yet.</p>
-                @endforelse
-            </div>
-        </div>
-
     </div>
 
 </div>
