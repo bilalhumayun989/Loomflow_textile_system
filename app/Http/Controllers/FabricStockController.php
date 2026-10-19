@@ -4,16 +4,50 @@ namespace App\Http\Controllers;
 
 use App\Models\FabricStock;
 use App\Models\SalesContract;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class FabricStockController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        $fabricStocks = FabricStock::latest('updated_at')->paginate(10);
-        $activeContracts = SalesContract::where('status', 'active')->latest()->get();
+        $fabricStocks = FabricStock::latest('updated_at')->limit(5)->get();
+        $activeContracts = SalesContract::where('status', 'active')->latest()->limit(5)->get();
+        $page = 'dashboard';
+
+        return $this->renderPage($page, $fabricStocks, $activeContracts);
+    }
+
+    public function inventory(): View
+    {
+        return $this->renderPage(
+            'inventory',
+            FabricStock::latest('updated_at')->paginate(15),
+            collect()
+        );
+    }
+
+    public function contracts(): View
+    {
+        return $this->renderPage(
+            'contracts',
+            collect(),
+            SalesContract::where('status', 'active')->latest()->paginate(20)
+        );
+    }
+
+    /**
+     * @param  Collection<int, FabricStock>|LengthAwarePaginator  $fabricStocks
+     * @param  Collection<int, SalesContract>|LengthAwarePaginator  $activeContracts
+     */
+    private function renderPage(
+        string $page,
+        Collection|LengthAwarePaginator $fabricStocks,
+        Collection|LengthAwarePaginator $activeContracts
+    ): View {
 
         // Totals
         $totalMetersInStock = FabricStock::sum('current_stock_meters');
@@ -23,6 +57,7 @@ class FabricStockController extends Controller
         $totalInventoryValue = FabricStock::selectRaw('SUM(current_stock_meters * unit_cost_meter) as total')->value('total') ?? 0;
 
         return view('fabric.index', compact(
+            'page',
             'fabricStocks',
             'activeContracts',
             'totalMetersInStock',

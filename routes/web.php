@@ -51,6 +51,8 @@ Route::middleware('auth')->group(function () {
 
     // 4. Fabric Stock (Finished goods, open stock vs contract commitment)
     Route::get('/fabric-stock', [FabricStockController::class, 'index'])->name('fabric.index');
+    Route::get('/fabric-stock/inventory', [FabricStockController::class, 'inventory'])->name('fabric.inventory');
+    Route::get('/fabric-stock/contracts', [FabricStockController::class, 'contracts'])->name('fabric.contracts');
     Route::post('/fabric-stock', [FabricStockController::class, 'storeStock'])->name('fabric.store');
 
     // 5. Sales (Sales slips, open market sales, multi-quality contracts)
