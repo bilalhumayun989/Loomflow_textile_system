@@ -27,6 +27,9 @@ Route::middleware('auth')->group(function () {
 
     // 1. Bags (Yarn management, purchase split, store stock & sizing history)
     Route::get('/bags', [BagController::class, 'index'])->name('bags.index');
+    Route::get('/bags/purchases', [BagController::class, 'purchases'])->name('bags.purchases');
+    Route::get('/bags/ledger', [BagController::class, 'ledger'])->name('bags.ledger');
+    Route::get('/bags/sizing-usage', [BagController::class, 'sizingUsage'])->name('bags.sizing-usage');
     Route::post('/bags/purchase', [BagController::class, 'storePurchase'])->name('bags.purchase');
     Route::post('/bags/issue', [BagController::class, 'issueStock'])->name('bags.issue');
     Route::post('/bags/return', [BagController::class, 'returnStock'])->name('bags.return');

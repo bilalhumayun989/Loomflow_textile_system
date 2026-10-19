@@ -86,6 +86,7 @@
                             </div>
                         </a>
 
+                        @if (!str_starts_with(Route::currentRouteName() ?? '', 'bags'))
                         <!-- MODULE SWITCHER DROPDOWN -->
                         <div class="relative ml-4" id="moduleSwitcherContainer">
                             @php
@@ -230,6 +231,7 @@
                                 </div>
                             </div>
                         </div>
+                        @endif
                     </div>
 
                     <!-- User Profile & Action Bar -->
@@ -302,7 +304,7 @@
         </div>
 
         <!-- Main Body Content -->
-        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main class="flex-1 {{ str_starts_with(Route::currentRouteName() ?? '', 'bags') ? 'w-full px-4 sm:px-6 lg:px-8 py-6' : 'max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6' }}">
             @yield('content')
         </main>
 

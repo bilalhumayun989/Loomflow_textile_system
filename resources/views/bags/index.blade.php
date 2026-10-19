@@ -3,7 +3,31 @@
 @section('title', 'Bags (Yarn) Management & Stock')
 
 @section('content')
-<div class="space-y-6">
+<div class="grid grid-cols-1 lg:grid-cols-[250px_minmax(0,1fr)] gap-6 items-start">
+    <aside class="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm lg:sticky lg:top-24">
+        <a href="{{ route('bags.index') }}" class="mb-4 flex items-center gap-3 rounded-2xl {{ $page === 'dashboard' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200' }} px-4 py-3 transition-colors">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-700">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            </span>
+            <span>
+                <span class="block text-sm font-extrabold">Bags Dashboard</span>
+            </span>
+        </a>
+
+        <nav class="space-y-2" aria-label="Bags sections">
+            <a href="{{ route('bags.purchases') }}" class="block w-full rounded-2xl {{ $page === 'purchases' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-600 hover:bg-zinc-100' }} px-4 py-3 text-xs font-bold transition-colors">
+                Bags Purchases
+            </a>
+            <a href="{{ route('bags.ledger') }}" class="block w-full rounded-2xl {{ $page === 'ledger' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-600 hover:bg-zinc-100' }} px-4 py-3 text-xs font-bold transition-colors">
+                Daily Stock Issuance
+            </a>
+            <a href="{{ route('bags.sizing-usage') }}" class="block w-full rounded-2xl {{ $page === 'sizing' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-600 hover:bg-zinc-100' }} px-4 py-3 text-xs font-bold transition-colors">
+                Sizing Bag Consumption
+            </a>
+        </nav>
+    </aside>
+
+    <div class="min-w-0 space-y-6">
 
     <!-- Header & Action Buttons -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-zinc-200">
@@ -12,8 +36,7 @@
                 <span class="w-2.5 h-2.5 rounded-full bg-zinc-700"></span>
                 <span class="text-xs font-bold uppercase tracking-wider text-zinc-500">Module 01</span>
             </div>
-            <h1 class="text-2xl font-black text-zinc-900 tracking-tight">Bags (Yarn) Management</h1>
-            <p class="text-xs text-zinc-400 mt-0.5">Purchases with split between Sizing and Factory Stock Store, daily issuance, and unused bags tracking.</p>
+            <h1 class="text-2xl font-black text-zinc-900 tracking-tight">{{ $page === 'dashboard' ? 'Bags Dashboard' : ['purchases' => 'Bags Purchases', 'ledger' => 'Daily Stock Issuance', 'sizing' => 'Sizing Bag Consumption'][$page] }}</h1>
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
@@ -33,6 +56,7 @@
     </div>
 
     <!-- KPI Metric Cards -->
+    @if ($page === 'dashboard')
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div class="glass-card rounded-2xl p-4 border border-zinc-200">
             <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
@@ -81,26 +105,21 @@
             </div>
         </div>
     </div>
+    @endif
 
-    <!-- MAIN SECTION TABS -->
+    <!-- Bags section content -->
     <div class="glass-card rounded-3xl p-6 border border-zinc-200">
         <div class="flex items-center justify-between mb-5">
-            <div class="flex items-center gap-3 flex-wrap">
-                <button type="button" onclick="switchBagTab('tabPurchases')" id="btnTabPurchases" class="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-900 text-zinc-50 shadow-sm">
-                    1. Bags Purchases & Split History
-                </button>
-                <button type="button" onclick="switchBagTab('tabLedger')" id="btnTabLedger" class="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-600 hover:bg-zinc-200">
-                    2. Daily Stock Issuance & Ledger Log
-                </button>
-                <button type="button" onclick="switchBagTab('tabSizingAnalysis')" id="btnTabSizingAnalysis" class="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-600 hover:bg-zinc-200">
-                    3. Sizing Bag Consumption & Returns
-                </button>
-            </div>
-            <div class="text-xs text-zinc-400 font-mono">Total Records: {{ $purchases->total() }} Purchases</div>
+            <h2 class="text-lg font-extrabold text-zinc-900">{{ $page === 'dashboard' ? 'Recent Bags Activity' : ['purchases' => 'Bags Purchases & Split History', 'ledger' => 'Daily Stock Issuance & Ledger Log', 'sizing' => 'Sizing Bag Consumption & Returns'][$page] }}</h2>
+            <div class="text-xs text-zinc-400 font-mono">{{ $page === 'dashboard' ? 'Latest records' : 'Complete history' }}</div>
         </div>
 
         <!-- TAB 1: PURCHASES & SPLIT -->
-        <div id="tabPurchases">
+        @if (in_array($page, ['dashboard', 'purchases'], true))
+        <section class="mb-8">
+            @if ($page === 'dashboard')
+                <h3 class="mb-3 text-sm font-bold text-zinc-700">Recent Purchases</h3>
+            @endif
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
                     <thead>
@@ -135,11 +154,18 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-4">{{ $purchases->links() }}</div>
-        </div>
+            @if ($page === 'purchases')
+                <div class="mt-4">{{ $purchases->links() }}</div>
+            @endif
+        </section>
+        @endif
 
         <!-- TAB 2: DAILY STOCK ISSUANCE & LEDGER -->
-        <div id="tabLedger" class="hidden">
+        @if (in_array($page, ['dashboard', 'ledger'], true))
+        <section class="mb-8">
+            @if ($page === 'dashboard')
+                <h3 class="mb-3 text-sm font-bold text-zinc-700">Recent Stock Movements</h3>
+            @endif
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
                     <thead>
@@ -181,11 +207,18 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-4">{{ $transactions->links() }}</div>
-        </div>
+            @if ($page === 'ledger')
+                <div class="mt-4">{{ $transactions->links() }}</div>
+            @endif
+        </section>
+        @endif
 
         <!-- TAB 3: SIZING BAG CONSUMPTION -->
-        <div id="tabSizingAnalysis" class="hidden">
+        @if (in_array($page, ['dashboard', 'sizing'], true))
+        <section>
+            @if ($page === 'dashboard')
+                <h3 class="mb-3 text-sm font-bold text-zinc-700">Recent Sizing Usage & Returns</h3>
+            @endif
             <div class="mb-4 p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-zinc-700 text-xs flex items-center justify-between">
                 <div><strong>Sizing Bags Reconciliation:</strong> See how many bags were given, used in beams, and where unused bags are.</div>
                 <a href="{{ route('sizing.index') }}" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 font-bold text-xs transition-colors shrink-0">Open Sizing Module &rarr;</a>
@@ -226,9 +259,14 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+            @if ($page === 'sizing')
+                <div class="mt-4">{{ $sizingSlips->links() }}</div>
+            @endif
+        </section>
+        @endif
     </div>
 
+    </div>
 </div>
 
 <!-- MODAL 1: NEW BAG PURCHASE -->
@@ -419,16 +457,6 @@
 
 @push('scripts')
 <script>
-    function switchBagTab(tabId) {
-        ['tabPurchases','tabLedger','tabSizingAnalysis'].forEach(id => document.getElementById(id).classList.add('hidden'));
-        ['btnTabPurchases','btnTabLedger','btnTabSizingAnalysis'].forEach(id => {
-            document.getElementById(id).className = 'px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-600 hover:bg-zinc-200';
-        });
-        document.getElementById(tabId).classList.remove('hidden');
-        const btnMap = {tabPurchases:'btnTabPurchases', tabLedger:'btnTabLedger', tabSizingAnalysis:'btnTabSizingAnalysis'};
-        document.getElementById(btnMap[tabId]).className = 'px-4 py-2 rounded-xl text-xs font-bold bg-zinc-900 text-zinc-50 shadow-sm';
-    }
-
     function calculateSplit() {
         const total = parseFloat(document.getElementById('inpTotalBags').value) || 0;
         const sizing = parseFloat(document.getElementById('inpBagsToSizing').value) || 0;

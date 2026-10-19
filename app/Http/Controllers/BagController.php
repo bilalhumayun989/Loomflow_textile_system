@@ -6,17 +6,65 @@ use App\Models\BagPurchase;
 use App\Models\BagTransaction;
 use App\Models\Ledger;
 use App\Models\SizingSlip;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class BagController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        $purchases = BagPurchase::latest('purchase_date')->latest('id')->paginate(10);
-        $transactions = BagTransaction::latest('transaction_date')->latest('id')->paginate(15);
-        $sizingSlips = SizingSlip::latest('slip_date')->get();
+        $purchases = BagPurchase::latest('purchase_date')->latest('id')->limit(5)->get();
+        $transactions = BagTransaction::latest('transaction_date')->latest('id')->limit(5)->get();
+        $sizingSlips = SizingSlip::latest('slip_date')->latest('id')->limit(5)->get();
+        $page = 'dashboard';
+
+        return $this->renderPage($page, $purchases, $transactions, $sizingSlips);
+    }
+
+    public function purchases(): View
+    {
+        return $this->renderPage(
+            'purchases',
+            BagPurchase::latest('purchase_date')->latest('id')->paginate(15),
+            collect(),
+            collect()
+        );
+    }
+
+    public function ledger(): View
+    {
+        return $this->renderPage(
+            'ledger',
+            collect(),
+            BagTransaction::latest('transaction_date')->latest('id')->paginate(20),
+            collect()
+        );
+    }
+
+    public function sizingUsage(): View
+    {
+        return $this->renderPage(
+            'sizing',
+            collect(),
+            collect(),
+            SizingSlip::latest('slip_date')->paginate(20)
+        );
+    }
+
+    /**
+     * @param  Collection<int, BagPurchase>|LengthAwarePaginator  $purchases
+     * @param  Collection<int, BagTransaction>|LengthAwarePaginator  $transactions
+     * @param  Collection<int, SizingSlip>|LengthAwarePaginator  $sizingSlips
+     */
+    private function renderPage(
+        string $page,
+        Collection|LengthAwarePaginator $purchases,
+        Collection|LengthAwarePaginator $transactions,
+        Collection|LengthAwarePaginator $sizingSlips
+    ): View {
 
         // Calculate exact store balances
         $totalPurchased = BagPurchase::sum('total_bags');
@@ -42,6 +90,7 @@ class BagController extends Controller
         $totalYarnInvestment = BagPurchase::sum('total_amount');
 
         return view('bags.index', compact(
+            'page',
             'purchases',
             'transactions',
             'sizingSlips',
