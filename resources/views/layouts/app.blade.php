@@ -69,7 +69,7 @@
         
         <!-- Top Navigation Bar -->
         <header class="sticky top-0 z-40 bg-white border-b border-zinc-200 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="w-full px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     
                     <!-- Logo & Brand -->
@@ -258,7 +258,7 @@
         </header>
 
         <!-- Flash Messages Banner -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        <div class="w-full px-4 sm:px-6 lg:px-8 mt-4">
             @if(session('success'))
                 <div class="p-4 rounded-2xl bg-zinc-100 border border-zinc-300 text-zinc-800 flex items-start gap-3 shadow-sm">
                     <svg class="w-5 h-5 text-zinc-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -302,13 +302,17 @@
         </div>
 
         <!-- Main Body Content -->
-        <main class="flex-1 {{ str_starts_with(Route::currentRouteName() ?? '', 'bags') ? 'w-full px-4 sm:px-6 lg:px-8 py-6' : 'max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6' }}">
+        @php
+            $fullWidthRoutes = ['bags', 'sizing'];
+            $isFullWidth = collect($fullWidthRoutes)->contains(fn($prefix) => str_starts_with(Route::currentRouteName() ?? '', $prefix));
+        @endphp
+        <main class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">
             @yield('content')
         </main>
 
         <!-- Footer -->
         <footer class="border-t border-zinc-200 bg-white py-4 text-center text-xs text-zinc-400">
-            <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div class="w-full px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
                 <div>
                     <strong class="text-zinc-700">LoomFlow</strong> &copy; {{ date('Y') }} - Intelligent Textile Loom & Mill ERP Management
                 </div>
