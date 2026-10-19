@@ -6,17 +6,52 @@ use App\Models\FabricStock;
 use App\Models\Ledger;
 use App\Models\Sale;
 use App\Models\SalesContract;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class SalesController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        $sales = Sale::with('contract')->latest('sale_date')->latest('id')->paginate(12);
-        $contracts = SalesContract::latest('start_date')->get();
-        $fabrics = FabricStock::where('current_stock_meters', '>', 0)->get();
+        $sales = Sale::with('contract')->latest('sale_date')->latest('id')->limit(5)->get();
+        $contracts = SalesContract::latest('start_date')->latest('id')->limit(5)->get();
+        $page = 'dashboard';
+
+        return $this->renderPage($page, $sales, $contracts);
+    }
+
+    public function slips(): View
+    {
+        return $this->renderPage(
+            'slips',
+            Sale::with('contract')->latest('sale_date')->latest('id')->paginate(15),
+            collect()
+        );
+    }
+
+    public function contracts(): View
+    {
+        return $this->renderPage(
+            'contracts',
+            collect(),
+            SalesContract::latest('start_date')->latest('id')->paginate(15)
+        );
+    }
+
+    /**
+     * @param  Collection<int, Sale>|LengthAwarePaginator  $sales
+     * @param  Collection<int, SalesContract>|LengthAwarePaginator  $contracts
+     */
+    private function renderPage(
+        string $page,
+        Collection|LengthAwarePaginator $sales,
+        Collection|LengthAwarePaginator $contracts
+    ): View {
+        $contractOptions = SalesContract::where('status', 'active')->latest('start_date')->get();
+        $fabrics = FabricStock::where('current_stock_meters', '>', 0)->orderBy('quality_name')->get();
 
         // Metrics
         $totalSalesCount = Sale::count();
@@ -30,8 +65,10 @@ class SalesController extends Controller
         $totalContractMetersDelivered = SalesContract::sum('delivered_meters');
 
         return view('sales.index', compact(
+            'page',
             'sales',
             'contracts',
+            'contractOptions',
             'fabrics',
             'totalSalesCount',
             'totalRevenue',

@@ -57,6 +57,8 @@ Route::middleware('auth')->group(function () {
 
     // 5. Sales (Sales slips, open market sales, multi-quality contracts)
     Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
+    Route::get('/sales/slips', [SalesController::class, 'slips'])->name('sales.slips');
+    Route::get('/sales/contracts', [SalesController::class, 'contracts'])->name('sales.contracts');
     Route::post('/sales', [SalesController::class, 'storeSale'])->name('sales.store');
     Route::post('/sales/contract', [SalesController::class, 'storeContract'])->name('sales.contract.store');
 
