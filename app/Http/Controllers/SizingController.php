@@ -5,16 +5,50 @@ namespace App\Http\Controllers;
 use App\Models\BagTransaction;
 use App\Models\SizingBeam;
 use App\Models\SizingSlip;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class SizingController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        $slips = SizingSlip::with('beams')->latest('slip_date')->paginate(10);
-        $beams = SizingBeam::with('sizingSlip')->latest('id')->paginate(15);
+        $slips = SizingSlip::with('beams')->latest('slip_date')->latest('id')->limit(5)->get();
+        $beams = SizingBeam::with('sizingSlip')->latest('id')->limit(5)->get();
+        $page = 'dashboard';
+
+        return $this->renderPage($page, $slips, $beams);
+    }
+
+    public function beams(): View
+    {
+        return $this->renderPage(
+            'beams',
+            collect(),
+            SizingBeam::with('sizingSlip')->latest('id')->paginate(15)
+        );
+    }
+
+    public function slips(): View
+    {
+        return $this->renderPage(
+            'slips',
+            SizingSlip::with('beams')->latest('slip_date')->latest('id')->paginate(10),
+            collect()
+        );
+    }
+
+    /**
+     * @param  Collection<int, SizingSlip>|LengthAwarePaginator  $slips
+     * @param  Collection<int, SizingBeam>|LengthAwarePaginator  $beams
+     */
+    private function renderPage(
+        string $page,
+        Collection|LengthAwarePaginator $slips,
+        Collection|LengthAwarePaginator $beams
+    ): View {
 
         // Stats
         $totalSlips = SizingSlip::count();
@@ -34,6 +68,7 @@ class SizingController extends Controller
         $looms = collect(range(1, 24))->map(fn ($i) => sprintf('Loom-%02d', $i));
 
         return view('sizing.index', compact(
+            'page',
             'slips',
             'beams',
             'totalSlips',

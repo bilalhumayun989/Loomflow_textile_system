@@ -36,6 +36,8 @@ Route::middleware('auth')->group(function () {
 
     // 2. Sizing (Sizing slip entry, beam tracking, bags used & returned)
     Route::get('/sizing', [SizingController::class, 'index'])->name('sizing.index');
+    Route::get('/sizing/beams', [SizingController::class, 'beams'])->name('sizing.beams');
+    Route::get('/sizing/slips', [SizingController::class, 'slips'])->name('sizing.slips');
     Route::post('/sizing/slip', [SizingController::class, 'storeSlip'])->name('sizing.slip.store');
     Route::post('/sizing/beams/{beam}/assign', [SizingController::class, 'assignBeam'])->name('sizing.beam.assign');
     Route::post('/sizing/beams/{beam}/exhaust', [SizingController::class, 'exhaustBeam'])->name('sizing.beam.exhaust');
