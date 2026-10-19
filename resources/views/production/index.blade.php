@@ -360,6 +360,7 @@
                             <th class="px-4 py-3">Fabric Variety</th>
                             <th class="px-4 py-3 text-center font-mono">Counters</th>
                             <th class="px-4 py-3 text-right bg-zinc-900/5 border-x border-zinc-200 font-black text-zinc-800">Net Produced</th>
+                            <th class="px-4 py-3 text-right">Est. / Short</th>
                             <th class="px-4 py-3 text-right">Beam Taken</th>
                             <th class="px-4 py-3 text-right bg-zinc-100/70 border-x border-zinc-200 text-zinc-600">Leakage</th>
                             <th class="px-4 py-3 text-center">Efficiency</th>
@@ -388,6 +389,14 @@
                                 <td class="px-4 py-3 text-right font-mono font-black text-zinc-900 text-sm bg-zinc-50 border-x border-zinc-200">
                                     +{{ number_format($p->net_meters_produced, 0) }}m
                                 </td>
+                                @php
+                                    $expectedShiftMeters = $p->picks_per_inch > 0 ? ($p->rpm * 720) / ($p->picks_per_inch * 39.37) : 0;
+                                    $shiftShortageMeters = max(0, $expectedShiftMeters - $p->net_meters_produced);
+                                @endphp
+                                <td class="px-4 py-3 text-right font-mono text-zinc-600">
+                                    {{ number_format($expectedShiftMeters, 0) }}m est.<br>
+                                    <span class="text-[10px] text-amber-700">{{ number_format($shiftShortageMeters, 0) }}m short</span>
+                                </td>
                                 <td class="px-4 py-3 text-right font-mono font-bold text-zinc-600">
                                     {{ number_format($p->beam_meters_consumed, 0) }}m
                                 </td>
@@ -401,7 +410,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="px-4 py-12 text-center">
+                                <td colspan="11" class="px-4 py-12 text-center">
                                     <div class="text-zinc-400 text-sm font-medium">No production entries match the criteria</div>
                                     <div class="text-zinc-300 text-xs mt-1">Click "+ Record Loom Production" to log your first shift</div>
                                 </td>
@@ -487,6 +496,10 @@
                             <option value="{{ $bm->id }}"
                                     data-quality="{{ $bm->yarn_quality }}"
                                     data-remaining="{{ $bm->remaining_length_meters }}"
+                                    data-total="{{ $bm->total_length_meters }}"
+                                    data-produced="{{ $bm->productions_sum_net_meters_produced ?? 0 }}"
+                                    data-ends="{{ $bm->sizingSlip?->total_ends ?? '' }}"
+                                    data-weight-kg="{{ $bm->sizingSlip?->sizing_weight_kg ?? '' }}"
                                     data-loom="{{ $bm->assigned_loom_no }}">
                                 {{ $bm->beam_no }} ({{ $bm->yarn_quality }}) — {{ number_format($bm->remaining_length_meters) }}m left [{{ $bm->assigned_loom_no ?? 'Ready' }}]
                             </option>
@@ -541,6 +554,17 @@
                         <strong id="displayEfficiency" class="text-zinc-800 text-lg font-black font-mono">0%</strong>
                     </div>
                 </div>
+                <div class="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-white border border-zinc-200 text-center">
+                    <div>
+                        <span class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Estimated 12h Output</span>
+                        <strong id="displayExpectedOutput" class="text-zinc-800 text-base font-black font-mono">0m</strong>
+                    </div>
+                    <div class="border-l border-zinc-100">
+                        <span class="text-[10px] text-zinc-500 uppercase font-semibold block mb-1">Output Shortage</span>
+                        <strong id="displayOutputShortage" class="text-amber-700 text-base font-black font-mono">0m</strong>
+                    </div>
+                </div>
+                <p id="displayBeamSummary" class="text-[11px] text-zinc-500">Select a sizing beam to see its set length and gate pass totals.</p>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -587,7 +611,16 @@
             if (opt.dataset.loom && opt.dataset.loom !== 'Ready') {
                 document.getElementById('selectProdLoom').value = opt.dataset.loom;
             }
+            const beamLength = parseFloat(opt.dataset.total) || 0;
+            const produced = parseFloat(opt.dataset.produced) || 0;
+            const ends = opt.dataset.ends || 'not recorded';
+            const weightKg = parseFloat(opt.dataset.weightKg) || 0;
+            const weightLb = weightKg * 2.20462;
+            document.getElementById('displayBeamSummary').innerText = `${beamLength.toFixed(2)}m beam · ${produced.toFixed(2)}m produced across shifts · ${ends} ends · ${weightKg ? `${weightLb.toFixed(2)} lb sizing bill` : 'sizing weight not recorded'}`;
+        } else {
+            document.getElementById('displayBeamSummary').innerText = 'Select a sizing beam to see its set length and gate pass totals.';
         }
+        calculateProductionLeakage();
     }
 
     function calculateProductionLeakage() {
@@ -602,10 +635,13 @@
         const leakagePct   = beamConsumed > 0 ? ((leakage / beamConsumed) * 100).toFixed(1) : '0.0';
         const theoretical  = (rpm * 60 * 12) / (ppi * 39.37);
         const efficiency   = theoretical > 0 ? Math.min(99.9, (netProduced / theoretical) * 100).toFixed(1) : '0.0';
+        const outputShortage = Math.max(0, theoretical - netProduced);
 
         document.getElementById('displayNetProduced').innerText    = netProduced.toFixed(0) + 'm';
         document.getElementById('displayLeakageMeters').innerText  = leakage.toFixed(0) + 'm (' + leakagePct + '%)';
         document.getElementById('displayEfficiency').innerText     = efficiency + '%';
+        document.getElementById('displayExpectedOutput').innerText = theoretical.toFixed(0) + 'm';
+        document.getElementById('displayOutputShortage').innerText = outputShortage.toFixed(0) + 'm';
 
         const btn = document.getElementById('btnSubmitProduction');
         if (end > start && beamConsumed > 0) {

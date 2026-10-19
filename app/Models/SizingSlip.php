@@ -20,6 +20,13 @@ class SizingSlip extends Model
         'bags_held_with_sizing',
         'total_beams',
         'total_length_meters',
+        'set_length_value',
+        'set_length_unit',
+        'total_ends',
+        'reed_count',
+        'fabric_width_inches',
+        'selvedge_ends',
+        'sizing_weight_kg',
         'slip_date',
         'status',
         'notes',
@@ -33,6 +40,12 @@ class SizingSlip extends Model
         'bags_held_with_sizing' => 'integer',
         'total_beams' => 'integer',
         'total_length_meters' => 'decimal:2',
+        'set_length_value' => 'decimal:2',
+        'total_ends' => 'integer',
+        'reed_count' => 'integer',
+        'fabric_width_inches' => 'decimal:2',
+        'selvedge_ends' => 'integer',
+        'sizing_weight_kg' => 'decimal:2',
     ];
 
     public function beams(): HasMany

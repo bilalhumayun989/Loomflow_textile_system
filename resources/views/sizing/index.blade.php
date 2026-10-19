@@ -318,7 +318,9 @@
                         <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-r border-zinc-200">Returned to Factory</th>
                         <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-r border-zinc-200">Held With Sizing</th>
                         <th class="px-4 py-3 text-center">Beams Created</th>
-                        <th class="px-4 py-3 text-right">Total Length</th>
+                        <th class="px-4 py-3 text-right">Set Length</th>
+                        <th class="px-4 py-3 text-right">Ends / Taarein</th>
+                        <th class="px-4 py-3 text-right">Sizing Weight</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-100">
@@ -336,10 +338,15 @@
                                 <span class="font-bold text-zinc-900">{{ $s->total_beams }}</span>
                                 <span class="text-zinc-400 text-[11px]"> beams</span>
                             </td>
-                            <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">{{ number_format($s->total_length_meters, 0) }}m</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">
+                                {{ number_format($s->set_length_value ?? $s->total_length_meters, 2) }} {{ $s->set_length_unit === 'gaz' ? 'gaz' : 'm' }}
+                                <span class="block text-[10px] font-normal text-zinc-400">{{ number_format($s->total_length_meters, 2) }}m converted</span>
+                            </td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->total_ends ? number_format($s->total_ends) : '—' }}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->sizing_weight_kg !== null ? number_format($s->sizing_weight_kg, 2).' kg / '.number_format($s->sizing_weight_kg * 2.20462, 2).' lb' : '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="px-4 py-10 text-center text-zinc-400">No sizing slips found. Click "+ New Sizing Slip Entry" to create one.</td></tr>
+                        <tr><td colspan="12" class="px-4 py-10 text-center text-zinc-400">No sizing slips found. Click "+ New Sizing Slip Entry" to create one.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -355,87 +362,195 @@
 </div>
 
 <!-- MODAL 1: NEW SIZING SLIP -->
-<div id="modalNewSizingSlip" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white border border-zinc-200 rounded-3xl max-w-xl w-full p-6 shadow-xl relative my-8">
-        <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
-            <div>
-                <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-zinc-700"></span>
-                    New Sizing Slip Entry
-                </h3>
-                <p class="text-xs text-zinc-400">Generates ready beams and tracks used vs returned bags</p>
+{{-- ============================================================
+     MODAL: NEW SIZING SLIP
+============================================================ --}}
+<div id="modalNewSizingSlip" class="fixed inset-0 z-50 hidden flex items-center justify-center overflow-y-auto bg-zinc-950/60 p-3 backdrop-blur-sm sm:p-6">
+    <div class="my-auto max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white shadow-2xl">
+
+        {{-- Sticky header --}}
+        <div class="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-6 py-4 backdrop-blur">
+            <div class="flex items-center gap-3">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-zinc-900">
+                    <svg class="h-5 w-5 text-zinc-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </span>
+                <div>
+                    <h3 class="text-base font-extrabold text-zinc-900">New Sizing Slip Entry</h3>
+                    <p class="text-xs text-zinc-400">Creates ready beams & tracks bag usage vs returns</p>
+                </div>
             </div>
-            <button type="button" onclick="closeModal('modalNewSizingSlip')" class="text-zinc-400 hover:text-zinc-900 p-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <button type="button" onclick="closeModal('modalNewSizingSlip')"
+                    class="rounded-xl p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
             </button>
         </div>
-        <form action="{{ route('sizing.slip.store') }}" method="POST" class="mt-4 space-y-4">
+
+        <form action="{{ route('sizing.slip.store') }}" method="POST" class="px-6 py-5 space-y-5">
             @csrf
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Sizing Slip # *</label>
-                    <input type="text" name="slip_no" required placeholder="e.g. SZ-2026-092" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Slip Date *</label>
-                    <input type="date" name="slip_date" required value="{{ date('Y-m-d') }}" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Sizing Unit / Party *</label>
-                    <input type="text" name="sizing_party" required placeholder="e.g. National Sizing Industries" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Yarn Quality *</label>
-                    <input type="text" name="yarn_quality" required placeholder="e.g. 30/1 PC Combed" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-            </div>
-            <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-3">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-zinc-600">⚖️ Sizing Bags Reconciliation</span>
-                    <span id="sizingBagStatus" class="text-xs font-bold font-mono text-zinc-500">Total Accounted: 0</span>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-semibold text-zinc-600 mb-1">Total Bags Given to Sizing *</label>
-                    <input type="number" id="inpBagsAllocated" name="bags_allocated" required min="1" placeholder="75" oninput="calculateSizingBags()" class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-                <div class="grid grid-cols-3 gap-2.5">
+
+            {{-- ── Section 1: Slip Basics ── --}}
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Slip Details</div>
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[10px] font-semibold text-zinc-600 mb-1">Used in Beams *</label>
-                        <input type="number" id="inpBagsUsed" name="bags_used" required min="1" placeholder="65" oninput="calculateSizingBags()" class="w-full bg-white border border-zinc-300 rounded-xl px-2.5 py-1.5 text-xs text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Sizing Slip # *</label>
+                        <input type="text" name="slip_no" required placeholder="e.g. SZ-2026-092"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-semibold text-zinc-600 mb-1">Returned to Mill</label>
-                        <input type="number" id="inpBagsReturned" name="bags_returned_to_factory" value="0" min="0" oninput="calculateSizingBags()" class="w-full bg-white border border-zinc-300 rounded-xl px-2.5 py-1.5 text-xs text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Slip Date *</label>
+                        <input type="date" name="slip_date" required value="{{ date('Y-m-d') }}"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-semibold text-zinc-600 mb-1">Held with Sizing</label>
-                        <input type="number" id="inpBagsHeld" name="bags_held_with_sizing" value="0" min="0" oninput="calculateSizingBags()" class="w-full bg-white border border-zinc-300 rounded-xl px-2.5 py-1.5 text-xs text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Sizing Unit / Party *</label>
+                        <input type="text" name="sizing_party" required placeholder="e.g. National Sizing Industries"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Yarn Quality *</label>
+                        <input type="text" name="yarn_quality" required placeholder="e.g. 30/1 PC Combed"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     </div>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Beams Produced *</label>
-                    <input type="number" id="inpTotalBeams" name="total_beams" required min="1" max="20" placeholder="4" oninput="calculateBeamLengthSplit()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+
+            {{-- ── Section 2: Bags Reconciliation ── --}}
+            <div class="rounded-2xl border border-zinc-200 bg-zinc-50 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-zinc-200 bg-zinc-100">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-zinc-700">⚖️ Bags Reconciliation</span>
+                        <span class="text-[10px] text-zinc-400">Used + Returned + Held must equal Allocated</span>
+                    </div>
+                    <span id="sizingBagStatus" class="text-xs font-bold font-mono text-zinc-500">—</span>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Warp Length (Meters) *</label>
-                    <input type="number" step="0.01" id="inpTotalLength" name="total_length_meters" required min="100" placeholder="18000" oninput="calculateBeamLengthSplit()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                <div class="p-4 space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Bags Given to Sizing *</label>
+                        <input type="number" id="inpBagsAllocated" name="bags_allocated" required min="1"
+                               placeholder="e.g. 75" oninput="calculateSizingBags()"
+                               class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2.5 text-base text-zinc-900 font-mono font-black focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="rounded-xl border border-zinc-200 bg-white p-3">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Used in Beams *</label>
+                            <input type="number" id="inpBagsUsed" name="bags_used" required min="0"
+                                   placeholder="65" oninput="calculateSizingBags()"
+                                   class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        </div>
+                        <div class="rounded-xl border border-zinc-200 bg-white p-3">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Returned to Mill</label>
+                            <input type="number" id="inpBagsReturned" name="bags_returned_to_factory"
+                                   value="0" min="0" oninput="calculateSizingBags()"
+                                   class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        </div>
+                        <div class="rounded-xl border border-zinc-200 bg-white p-3">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Held with Sizing</label>
+                            <input type="number" id="inpBagsHeld" name="bags_held_with_sizing"
+                                   value="0" min="0" oninput="calculateSizingBags()"
+                                   class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        </div>
+                    </div>
+                    {{-- Balance indicator bar --}}
+                    <div id="bagBalanceBar" class="h-1.5 rounded-full bg-zinc-200 overflow-hidden">
+                        <div id="bagBalanceFill" class="h-full rounded-full bg-zinc-300 transition-all duration-300" style="width:0%"></div>
+                    </div>
                 </div>
             </div>
-            <div class="p-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-600 flex items-center justify-between">
-                <span>Calculated Beam Length:</span>
-                <strong id="displayPerBeamLength" class="font-mono text-sm text-zinc-900">4,500m per beam</strong>
+
+            {{-- ── Section 3: Beam & Length Info ── --}}
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Beam & Warp Length</div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Beams Produced *</label>
+                        <input type="number" id="inpTotalBeams" name="total_beams" required min="1" max="100"
+                               placeholder="e.g. 4" oninput="calculateBeamLengthSplit()"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Set Length (Gate Pass) *</label>
+                        <div class="flex gap-2">
+                            <input type="number" step="0.01" id="inpSetLength" name="set_length_value"
+                                   required min="0.01" placeholder="e.g. 18481" oninput="calculateBeamLengthSplit()"
+                                   class="min-w-0 flex-1 bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                            <select id="selectSetLengthUnit" name="set_length_unit" onchange="calculateBeamLengthSplit()"
+                                    class="w-24 bg-zinc-50 border border-zinc-300 rounded-xl px-2 py-2 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                                <option value="meters">Meters</option>
+                                <option value="gaz">Gaz/yds</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Live beam length result --}}
+                <div class="mt-3 flex items-center justify-between rounded-xl bg-zinc-900 px-4 py-3">
+                    <span class="text-xs text-zinc-400">Calculated beam length:</span>
+                    <strong id="displayPerBeamLength" class="font-mono text-sm text-zinc-50">Enter values above</strong>
+                </div>
             </div>
+
+            {{-- ── Section 4: Construction Details (optional) ── --}}
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Construction Details <span class="normal-case font-normal text-zinc-300">(optional)</span></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Ends / Taarein</label>
+                        <input type="number" name="total_ends" min="1" placeholder="e.g. 11550"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <span class="mt-1 block text-[10px] text-zinc-400">Or leave blank and use Reed × Width</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-600 mb-1">Reed</label>
+                            <input type="number" name="reed_count" min="1" placeholder="—"
+                                   class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-600 mb-1">Width (in)</label>
+                            <input type="number" step="0.01" name="fabric_width_inches" min="0.01" placeholder="—"
+                                   class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Extra Selvedge Ends</label>
+                        <input type="number" name="selvedge_ends" min="0" value="0"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Sizing Bill Weight (kg)</label>
+                        <input type="number" step="0.01" name="sizing_weight_kg" min="0" placeholder="—"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    </div>
+                </div>
+            </div>
+
+            {{-- Notes --}}
             <div>
                 <label class="block text-xs font-semibold text-zinc-600 mb-1">Notes</label>
-                <input type="text" name="notes" placeholder="e.g. Sizing chemicals used, tension settings" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                <input type="text" name="notes" placeholder="e.g. Sizing chemicals used, tension settings"
+                       class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
             </div>
-            <div class="pt-3 border-t border-zinc-100 flex justify-end gap-3">
-                <button type="button" onclick="closeModal('modalNewSizingSlip')" class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-600 text-xs font-semibold">Cancel</button>
-                <button type="submit" id="btnSubmitSizingSlip" class="px-5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 text-xs font-black shadow-sm">Create Slip & Beams</button>
+
+            {{-- Footer actions --}}
+            <div class="pt-3 border-t border-zinc-100 flex items-center justify-between gap-3">
+                <p class="text-[11px] text-zinc-400">Bags must balance before submitting</p>
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="closeModal('modalNewSizingSlip')"
+                            class="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-semibold transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" id="btnSubmitSizingSlip"
+                            class="px-6 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 text-xs font-black shadow-sm transition-colors opacity-50 cursor-not-allowed"
+                            disabled>
+                        Create Slip & Beams
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -489,22 +604,43 @@
         const sum = used + returned + held;
         const statusEl = document.getElementById('sizingBagStatus');
         const submitBtn = document.getElementById('btnSubmitSizingSlip');
+        const fill = document.getElementById('bagBalanceFill');
+
+        // update progress bar
+        const pct = allocated > 0 ? Math.min(100, Math.round((sum / allocated) * 100)) : 0;
+        fill.style.width = pct + '%';
+
         if (sum === allocated && allocated > 0) {
-            statusEl.innerText = `Balanced: ${used}+${returned}+${held}=${allocated} ✓`;
+            statusEl.innerText = `✓ Balanced: ${used}+${returned}+${held} = ${allocated}`;
             statusEl.className = 'text-xs font-bold font-mono text-zinc-700';
-            submitBtn.disabled = false; submitBtn.classList.remove('opacity-50','cursor-not-allowed');
+            fill.className = 'h-full rounded-full bg-zinc-800 transition-all duration-300';
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else if (sum > allocated && allocated > 0) {
+            statusEl.innerText = `✗ Over by ${sum - allocated} bags`;
+            statusEl.className = 'text-xs font-bold font-mono text-zinc-500';
+            fill.className = 'h-full rounded-full bg-zinc-400 transition-all duration-300';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
         } else {
-            statusEl.innerText = `Sum: ${sum}/${allocated} ✗`;
+            const remaining = allocated - sum;
+            statusEl.innerText = allocated > 0 ? `${remaining} bags unaccounted` : '—';
             statusEl.className = 'text-xs font-bold font-mono text-zinc-400';
-            submitBtn.disabled = true; submitBtn.classList.add('opacity-50','cursor-not-allowed');
+            fill.className = 'h-full rounded-full bg-zinc-300 transition-all duration-300';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
     }
 
     function calculateBeamLengthSplit() {
         const beams = parseInt(document.getElementById('inpTotalBeams').value) || 1;
-        const totalLen = parseFloat(document.getElementById('inpTotalLength').value) || 0;
+        const setLength = parseFloat(document.getElementById('inpSetLength').value) || 0;
+        const unit = document.getElementById('selectSetLengthUnit').value;
+        const totalLen = setLength * (unit === 'gaz' ? 0.9144 : 1);
         if (beams > 0 && totalLen > 0) {
-            document.getElementById('displayPerBeamLength').innerText = `${beams} Beams x ${(totalLen/beams).toFixed(1)}m each`;
+            document.getElementById('displayPerBeamLength').innerText = `${totalLen.toFixed(2)}m total · ${(totalLen/beams).toFixed(2)}m per beam`;
+        } else {
+            document.getElementById('displayPerBeamLength').innerText = 'Enter set length';
         }
     }
 

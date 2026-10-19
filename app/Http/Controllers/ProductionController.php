@@ -47,7 +47,10 @@ class ProductionController extends Controller
     {
 
         // Active Beams mounted or ready
-        $activeBeams = SizingBeam::where('status', '!=', 'exhausted')->get();
+        $activeBeams = SizingBeam::withSum('productions', 'net_meters_produced')
+            ->with('sizingSlip')
+            ->where('status', '!=', 'exhausted')
+            ->get();
         $looms = collect(range(1, 24))->map(fn ($i) => sprintf('Loom-%02d', $i));
 
         // Aggregate statistics
@@ -97,6 +100,13 @@ class ProductionController extends Controller
         $netMetersProduced = $validated['end_meter'] - $validated['start_meter'];
         $beamConsumed = (float) $validated['beam_meters_consumed'];
 
+        $beam = SizingBeam::whereKey($validated['sizing_beam_id'])->lockForUpdate()->firstOrFail();
+        if ($beamConsumed > (float) $beam->remaining_length_meters) {
+            return back()->withInput()->withErrors([
+                'beam_meters_consumed' => 'Beam consumption cannot exceed the selected beam\'s remaining length.',
+            ]);
+        }
+
         // Calculate leakage / wastage
         $leakageMeters = max(0, $beamConsumed - $netMetersProduced);
         $leakagePercentage = $beamConsumed > 0 ? round(($leakageMeters / $beamConsumed) * 100, 2) : 0;
@@ -114,18 +124,15 @@ class ProductionController extends Controller
         $production = Production::create($validated);
 
         // Deduct beam length
-        $beam = SizingBeam::find($validated['sizing_beam_id']);
-        if ($beam) {
-            $newRemaining = max(0, $beam->remaining_length_meters - $beamConsumed);
-            $beam->remaining_length_meters = $newRemaining;
-            if ($newRemaining <= 0) {
-                $beam->status = 'exhausted';
-            } else {
-                $beam->status = 'mounted_on_loom';
-                $beam->assigned_loom_no = $validated['loom_no'];
-            }
-            $beam->save();
+        $newRemaining = max(0, $beam->remaining_length_meters - $beamConsumed);
+        $beam->remaining_length_meters = $newRemaining;
+        if ($newRemaining <= 0) {
+            $beam->status = 'exhausted';
+        } else {
+            $beam->status = 'mounted_on_loom';
+            $beam->assigned_loom_no = $validated['loom_no'];
         }
+        $beam->save();
 
         // Add produced fabric to FabricStock
         $fabric = FabricStock::firstOrCreate(

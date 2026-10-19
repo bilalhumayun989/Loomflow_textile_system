@@ -96,8 +96,14 @@ class SizingController extends Controller
             'bags_used' => 'required|integer|min:1',
             'bags_returned_to_factory' => 'required|integer|min:0',
             'bags_held_with_sizing' => 'required|integer|min:0',
-            'total_beams' => 'required|integer|min:1|max:20',
-            'total_length_meters' => 'required|numeric|min:100',
+            'total_beams' => 'required|integer|min:1|max:100',
+            'set_length_value' => 'required|numeric|min:0.01',
+            'set_length_unit' => 'required|in:meters,gaz',
+            'total_ends' => 'nullable|integer|min:1',
+            'reed_count' => 'nullable|integer|min:1',
+            'fabric_width_inches' => 'nullable|numeric|min:0.01',
+            'selvedge_ends' => 'nullable|integer|min:0',
+            'sizing_weight_kg' => 'nullable|numeric|min:0',
             'slip_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
@@ -106,6 +112,24 @@ class SizingController extends Controller
         if ($accountedBags != $validated['bags_allocated']) {
             return back()->withInput()->with('error', "Error: Bags Used ({$validated['bags_used']}) + Returned ({$validated['bags_returned_to_factory']}) + Held ({$validated['bags_held_with_sizing']}) = {$accountedBags}, which does not match Allocated Bags ({$validated['bags_allocated']}).");
         }
+
+        if (empty($validated['total_ends']) && (empty($validated['reed_count']) || empty($validated['fabric_width_inches']))) {
+            return back()->withInput()->withErrors([
+                'total_ends' => 'Enter gate pass total ends, or provide both reed count and fabric width.',
+            ]);
+        }
+
+        if (empty($validated['total_ends'])) {
+            $validated['total_ends'] = (int) round($validated['reed_count'] * $validated['fabric_width_inches'])
+                + (int) ($validated['selvedge_ends'] ?? 0);
+        }
+
+        $validated['selvedge_ends'] = (int) ($validated['selvedge_ends'] ?? 0);
+
+        $validated['total_length_meters'] = round(
+            $validated['set_length_value'] * ($validated['set_length_unit'] === 'gaz' ? 0.9144 : 1),
+            2
+        );
 
         $slip = SizingSlip::create($validated);
 
