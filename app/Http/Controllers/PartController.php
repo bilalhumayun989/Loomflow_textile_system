@@ -4,16 +4,51 @@ namespace App\Http\Controllers;
 
 use App\Models\Part;
 use App\Models\PartIssuance;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class PartController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        $parts = Part::withCount('issuances')->orderBy('category')->orderBy('part_name')->paginate(12);
-        $issuances = PartIssuance::with('part')->latest('issuance_date')->latest('id')->paginate(15);
+        $parts = Part::withCount('issuances')->latest('id')->limit(5)->get();
+        $issuances = PartIssuance::with('part')->latest('issuance_date')->latest('id')->limit(5)->get();
+        $page = 'dashboard';
+
+        return $this->renderPage($page, $parts, $issuances);
+    }
+
+    public function inventory(): View
+    {
+        return $this->renderPage(
+            'inventory',
+            Part::withCount('issuances')->orderBy('category')->orderBy('part_name')->paginate(15),
+            collect()
+        );
+    }
+
+    public function issuances(): View
+    {
+        return $this->renderPage(
+            'issuances',
+            collect(),
+            PartIssuance::with('part')->latest('issuance_date')->latest('id')->paginate(20)
+        );
+    }
+
+    /**
+     * @param  Collection<int, Part>|LengthAwarePaginator  $parts
+     * @param  Collection<int, PartIssuance>|LengthAwarePaginator  $issuances
+     */
+    private function renderPage(
+        string $page,
+        Collection|LengthAwarePaginator $parts,
+        Collection|LengthAwarePaginator $issuances
+    ): View {
+        $issuanceParts = Part::orderBy('part_name')->get();
 
         // Stats
         $totalItemsCount = Part::count();
@@ -27,7 +62,9 @@ class PartController extends Controller
         $looms = collect(range(1, 24))->map(fn ($i) => sprintf('Loom-%02d', $i));
 
         return view('parts.index', compact(
+            'page',
             'parts',
+            'issuanceParts',
             'issuances',
             'totalItemsCount',
             'totalStockUnits',

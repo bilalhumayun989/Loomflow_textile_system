@@ -44,6 +44,8 @@ Route::middleware('auth')->group(function () {
 
     // 3. Parts (Parts store, gripper/accessories inventory, factory issuance)
     Route::get('/parts', [PartController::class, 'index'])->name('parts.index');
+    Route::get('/parts/inventory', [PartController::class, 'inventory'])->name('parts.inventory');
+    Route::get('/parts/issuances', [PartController::class, 'issuances'])->name('parts.issuances');
     Route::post('/parts', [PartController::class, 'storePart'])->name('parts.store');
     Route::post('/parts/issue', [PartController::class, 'issuePart'])->name('parts.issue');
 
