@@ -303,7 +303,7 @@
 
         <!-- Main Body Content -->
         @php
-            $fullWidthRoutes = ['bags', 'sizing', 'parts', 'fabric', 'sales'];
+            $fullWidthRoutes = ['bags', 'sizing', 'parts', 'fabric', 'sales', 'production'];
             $isFullWidth = collect($fullWidthRoutes)->contains(fn($prefix) => str_starts_with(Route::currentRouteName() ?? '', $prefix));
         @endphp
         <main class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">

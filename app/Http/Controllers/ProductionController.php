@@ -5,13 +5,27 @@ namespace App\Http\Controllers;
 use App\Models\FabricStock;
 use App\Models\Production;
 use App\Models\SizingBeam;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class ProductionController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
+    {
+        $productions = Production::with('beam')->latest('production_date')->latest('id')->limit(5)->get();
+
+        return $this->renderPage('dashboard', $productions);
+    }
+
+    public function loomSummary(): View
+    {
+        return $this->renderPage('loom-summary', collect());
+    }
+
+    public function history(Request $request): View
     {
         $query = Production::with('beam')->latest('production_date')->latest('id');
 
@@ -23,7 +37,14 @@ class ProductionController extends Controller
             $query->whereDate('production_date', $request->date);
         }
 
-        $productions = $query->paginate(15)->withQueryString();
+        return $this->renderPage('history', $query->paginate(15)->withQueryString());
+    }
+
+    /**
+     * @param  Collection<int, Production>|LengthAwarePaginator  $productions
+     */
+    private function renderPage(string $page, Collection|LengthAwarePaginator $productions): View
+    {
 
         // Active Beams mounted or ready
         $activeBeams = SizingBeam::where('status', '!=', 'exhausted')->get();
@@ -43,6 +64,7 @@ class ProductionController extends Controller
             ->get();
 
         return view('production.index', compact(
+            'page',
             'productions',
             'activeBeams',
             'looms',
