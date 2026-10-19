@@ -261,7 +261,10 @@
                             <td class="px-4 py-3 font-semibold text-zinc-800">{{ $p->supplier_name }}</td>
                             <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700 font-mono text-[11px]">{{ $p->quality }}</span></td>
                             <td class="px-4 py-3 text-right font-black text-zinc-900">{{ $p->total_bags }}</td>
-                            <td class="px-4 py-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-x border-zinc-200">{{ $p->bags_to_sizing }}</td>
+                            <td class="px-4 py-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-x border-zinc-200">
+                                {{ $p->bags_to_sizing }}
+                                <span class="block text-[10px] font-normal text-zinc-500">{{ $p->sizing_destination ?: '—' }} · {{ number_format($p->bags_to_sizing * 45.359237, 2) }} kg</span>
+                            </td>
                             <td class="px-4 py-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-r border-zinc-200">{{ $p->bags_to_factory }}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-500">Rs. {{ number_format($p->rate_per_bag, 2) }}</td>
                             <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">Rs. {{ number_format($p->total_amount, 2) }}</td>
@@ -496,14 +499,20 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[11px] font-semibold text-zinc-600 mb-1">Direct to Sizing (Bags)</label>
-                        <input type="number" id="inpBagsToSizing" name="bags_to_sizing" value="0" min="0" oninput="validateSplitNumbers()" class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <input type="number" id="inpBagsToSizing" name="bags_to_sizing" value="0" min="0" oninput="validateSplitNumbers(); updateSizingDestination(); updateSizingBagWeight()" class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         <span class="text-[10px] text-zinc-400">Directly sent to sizing mill</span>
+                        <span id="displaySizingBagWeight" class="block text-[10px] font-semibold text-zinc-600">0 bags · 0.00 kg / 0 lb</span>
                     </div>
                     <div>
                         <label class="block text-[11px] font-semibold text-zinc-600 mb-1">To Factory Godown (Bags)</label>
                         <input type="number" id="inpBagsToFactory" name="bags_to_factory" value="0" min="0" oninput="validateSplitNumbers()" class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         <span class="text-[10px] text-zinc-400">Stored in mill warehouse</span>
                     </div>
+                </div>
+                <div id="sizingDestinationWrap" class="hidden">
+                    <label class="block text-[11px] font-semibold text-zinc-600 mb-1">Sizing Mill / Contractor *</label>
+                    <input type="text" id="inpSizingDestination" name="sizing_destination" placeholder="e.g. National Sizing Mill" class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    <span class="mt-1 block text-[10px] text-zinc-500">This will appear as a pending sizing entry with the bag quantity and quality already filled.</span>
                 </div>
                 <div class="pt-2 border-t border-zinc-200 flex items-center justify-between text-xs">
                     <span class="text-zinc-500">Calculated Total Amount:</span>
@@ -547,8 +556,8 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-zinc-600 mb-1">Quantity (Bags) *</label>
-                    <input type="number" name="quantity_bags" required min="1" max="{{ $factoryStoreStock }}" placeholder="10" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                    <span class="text-[10px] text-zinc-500">In Godown: {{ $factoryStoreStock }} bags</span>
+                    <input type="number" id="inpIssueBags" name="quantity_bags" required min="1" max="{{ $factoryStoreStock }}" placeholder="10" oninput="updateIssueBagWeight()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    <span class="text-[10px] text-zinc-500">In Godown: {{ $factoryStoreStock }} bags · <span id="displayIssueBagWeight">0.00 kg</span></span>
                 </div>
             </div>
             <div>
@@ -629,6 +638,24 @@
 
 @push('scripts')
 <script>
+    function updateSizingDestination() {
+        const quantity = parseInt(document.getElementById('inpBagsToSizing').value) || 0;
+        const wrap = document.getElementById('sizingDestinationWrap');
+        const destination = document.getElementById('inpSizingDestination');
+        wrap.classList.toggle('hidden', quantity <= 0);
+        destination.required = quantity > 0;
+    }
+
+    function updateSizingBagWeight() {
+        const bags = parseInt(document.getElementById('inpBagsToSizing').value) || 0;
+        document.getElementById('displaySizingBagWeight').innerText = `${bags} bags · ${(bags * 45.359237).toFixed(2)} kg / ${(bags * 100).toLocaleString()} lb`;
+    }
+
+    function updateIssueBagWeight() {
+        const bags = parseInt(document.getElementById('inpIssueBags').value) || 0;
+        document.getElementById('displayIssueBagWeight').innerText = `${(bags * 45.359237).toFixed(2)} kg (${(bags * 100).toLocaleString()} lb)`;
+    }
+
     function calculateSplit() {
         const total = parseFloat(document.getElementById('inpTotalBags').value) || 0;
         const sizing = parseFloat(document.getElementById('inpBagsToSizing').value) || 0;
@@ -638,6 +665,8 @@
             document.getElementById('inpBagsToSizing').value = half;
             document.getElementById('inpBagsToFactory').value = total - half;
         }
+        updateSizingDestination();
+        updateSizingBagWeight();
         validateSplitNumbers();
     }
 

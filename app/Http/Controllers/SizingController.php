@@ -13,6 +13,10 @@ use Illuminate\View\View;
 
 class SizingController extends Controller
 {
+    private const BAG_WEIGHT_POUNDS = 100;
+
+    private const KILOGRAMS_PER_POUND = 0.45359237;
+
     public function index(): View
     {
         $slips = SizingSlip::with('beams')->latest('slip_date')->latest('id')->limit(5)->get();
@@ -63,6 +67,12 @@ class SizingController extends Controller
         $exhaustedBeamsCount = SizingBeam::where('status', 'exhausted')->count();
         $totalBeamMetersProduced = SizingBeam::sum('total_length_meters');
         $remainingBeamMetersOnLooms = SizingBeam::where('status', 'mounted_on_loom')->sum('remaining_length_meters');
+        $pendingSizingTransactions = BagTransaction::whereIn('transaction_type', ['purchase_sizing', 'issue_to_sizing'])
+            ->whereDoesntHave('sizingSlip')
+            ->latest('transaction_date')
+            ->latest('id')
+            ->get();
+        $kilogramsPerBag = self::BAG_WEIGHT_POUNDS * self::KILOGRAMS_PER_POUND;
 
         // All active looms list (1 to 24)
         $looms = collect(range(1, 24))->map(fn ($i) => sprintf('Loom-%02d', $i));
@@ -82,6 +92,8 @@ class SizingController extends Controller
             'exhaustedBeamsCount',
             'totalBeamMetersProduced',
             'remainingBeamMetersOnLooms',
+            'pendingSizingTransactions',
+            'kilogramsPerBag',
             'looms'
         ));
     }
@@ -93,7 +105,7 @@ class SizingController extends Controller
             'sizing_party' => 'required|string|max:150',
             'yarn_quality' => 'required|string|max:100',
             'bags_allocated' => 'required|integer|min:1',
-            'bags_used' => 'required|integer|min:1',
+            'bags_used' => 'required|integer|min:0',
             'bags_returned_to_factory' => 'required|integer|min:0',
             'bags_held_with_sizing' => 'required|integer|min:0',
             'total_beams' => 'required|integer|min:1|max:100',
@@ -104,9 +116,28 @@ class SizingController extends Controller
             'fabric_width_inches' => 'nullable|numeric|min:0.01',
             'selvedge_ends' => 'nullable|integer|min:0',
             'sizing_weight_kg' => 'nullable|numeric|min:0',
+            'bag_transaction_id' => 'nullable|integer|exists:bag_transactions,id',
             'slip_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
+
+        $sourceTransaction = null;
+        if (! empty($validated['bag_transaction_id'])) {
+            $sourceTransaction = BagTransaction::whereKey($validated['bag_transaction_id'])
+                ->whereIn('transaction_type', ['purchase_sizing', 'issue_to_sizing'])
+                ->whereDoesntHave('sizingSlip')
+                ->first();
+
+            if (! $sourceTransaction) {
+                return back()->withInput()->withErrors([
+                    'bag_transaction_id' => 'This sizing bag entry has already been used or is no longer available.',
+                ]);
+            }
+
+            $validated['bags_allocated'] = $sourceTransaction->quantity_bags;
+            $validated['yarn_quality'] = $sourceTransaction->quality;
+            $validated['sizing_party'] = $sourceTransaction->destination ?: ($sourceTransaction->party_name ?: $sourceTransaction->source);
+        }
 
         $accountedBags = $validated['bags_used'] + $validated['bags_returned_to_factory'] + $validated['bags_held_with_sizing'];
         if ($accountedBags != $validated['bags_allocated']) {
@@ -130,6 +161,15 @@ class SizingController extends Controller
             $validated['set_length_value'] * ($validated['set_length_unit'] === 'gaz' ? 0.9144 : 1),
             2
         );
+
+        $validated['sizing_weight_pounds'] = isset($validated['sizing_weight_kg'])
+            ? round($validated['sizing_weight_kg'] / self::KILOGRAMS_PER_POUND, 2)
+            : null;
+        unset($validated['sizing_weight_kg']);
+
+        if ($sourceTransaction) {
+            $validated['bag_transaction_id'] = $sourceTransaction->id;
+        }
 
         $slip = SizingSlip::create($validated);
 

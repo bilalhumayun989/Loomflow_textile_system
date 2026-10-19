@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class BagTransaction extends Model
 {
@@ -25,4 +26,9 @@ class BagTransaction extends Model
         'transaction_date' => 'date',
         'quantity_bags' => 'integer',
     ];
+
+    public function sizingSlip(): HasOne
+    {
+        return $this->hasOne(SizingSlip::class);
+    }
 }

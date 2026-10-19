@@ -115,6 +115,7 @@ class BagController extends Controller
             'total_bags' => 'required|integer|min:1',
             'bags_to_sizing' => 'required|integer|min:0',
             'bags_to_factory' => 'required|integer|min:0',
+            'sizing_destination' => 'nullable|string|max:150',
             'rate_per_bag' => 'required|numeric|min:0',
             'purchase_date' => 'required|date',
             'notes' => 'nullable|string',
@@ -122,6 +123,12 @@ class BagController extends Controller
 
         if (($validated['bags_to_sizing'] + $validated['bags_to_factory']) != $validated['total_bags']) {
             return back()->withInput()->with('error', 'Error: Split bags (Sizing + Factory) must exactly equal Total Bags ('.$validated['total_bags'].').');
+        }
+
+        if ($validated['bags_to_sizing'] > 0 && empty($validated['sizing_destination'])) {
+            return back()->withInput()->withErrors([
+                'sizing_destination' => 'Enter the sizing mill or contractor receiving these bags.',
+            ]);
         }
 
         $totalAmount = $validated['total_bags'] * $validated['rate_per_bag'];
@@ -152,8 +159,8 @@ class BagController extends Controller
                 'quality' => $purchase->quality,
                 'quantity_bags' => $purchase->bags_to_sizing,
                 'source' => $purchase->supplier_name,
-                'destination' => 'Sizing Mill / Contractor',
-                'party_name' => 'Sizing Vendor',
+                'destination' => $purchase->sizing_destination,
+                'party_name' => $purchase->sizing_destination,
                 'transaction_date' => $purchase->purchase_date,
                 'notes' => 'Direct delivery from spinning mill to sizing unit',
             ]);

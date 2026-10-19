@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SizingSlip extends Model
@@ -26,7 +27,8 @@ class SizingSlip extends Model
         'reed_count',
         'fabric_width_inches',
         'selvedge_ends',
-        'sizing_weight_kg',
+        'sizing_weight_pounds',
+        'bag_transaction_id',
         'slip_date',
         'status',
         'notes',
@@ -45,11 +47,16 @@ class SizingSlip extends Model
         'reed_count' => 'integer',
         'fabric_width_inches' => 'decimal:2',
         'selvedge_ends' => 'integer',
-        'sizing_weight_kg' => 'decimal:2',
+        'sizing_weight_pounds' => 'decimal:2',
     ];
 
     public function beams(): HasMany
     {
         return $this->hasMany(SizingBeam::class);
+    }
+
+    public function bagTransaction(): BelongsTo
+    {
+        return $this->belongsTo(BagTransaction::class);
     }
 }

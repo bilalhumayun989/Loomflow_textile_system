@@ -16,6 +16,7 @@ class BagPurchase extends Model
         'total_bags',
         'bags_to_sizing',
         'bags_to_factory',
+        'sizing_destination',
         'rate_per_bag',
         'total_amount',
         'purchase_date',

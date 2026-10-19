@@ -499,7 +499,7 @@
                                     data-total="{{ $bm->total_length_meters }}"
                                     data-produced="{{ $bm->productions_sum_net_meters_produced ?? 0 }}"
                                     data-ends="{{ $bm->sizingSlip?->total_ends ?? '' }}"
-                                    data-weight-kg="{{ $bm->sizingSlip?->sizing_weight_kg ?? '' }}"
+                                    data-weight-pounds="{{ $bm->sizingSlip?->sizing_weight_pounds ?? '' }}"
                                     data-loom="{{ $bm->assigned_loom_no }}">
                                 {{ $bm->beam_no }} ({{ $bm->yarn_quality }}) — {{ number_format($bm->remaining_length_meters) }}m left [{{ $bm->assigned_loom_no ?? 'Ready' }}]
                             </option>
@@ -614,9 +614,9 @@
             const beamLength = parseFloat(opt.dataset.total) || 0;
             const produced = parseFloat(opt.dataset.produced) || 0;
             const ends = opt.dataset.ends || 'not recorded';
-            const weightKg = parseFloat(opt.dataset.weightKg) || 0;
-            const weightLb = weightKg * 2.20462;
-            document.getElementById('displayBeamSummary').innerText = `${beamLength.toFixed(2)}m beam · ${produced.toFixed(2)}m produced across shifts · ${ends} ends · ${weightKg ? `${weightLb.toFixed(2)} lb sizing bill` : 'sizing weight not recorded'}`;
+            const weightLb = parseFloat(opt.dataset.weightPounds) || 0;
+            const weightKg = weightLb * 0.45359237;
+            document.getElementById('displayBeamSummary').innerText = `${beamLength.toFixed(2)}m beam · ${produced.toFixed(2)}m produced across shifts · ${ends} ends · ${weightLb ? `${weightKg.toFixed(2)} kg sizing bill (${weightLb.toFixed(2)} lb)` : 'sizing weight not recorded'}`;
         } else {
             document.getElementById('displayBeamSummary').innerText = 'Select a sizing beam to see its set length and gate pass totals.';
         }

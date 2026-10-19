@@ -175,6 +175,41 @@
     {{-- ============================================================
          SECTION 1 — Beams Tracking
     ============================================================ --}}
+    @if($pendingSizingTransactions->isNotEmpty())
+    <section class="overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b border-amber-100 bg-amber-50 px-6 py-4">
+            <div>
+                <h2 class="text-sm font-extrabold text-zinc-900">Bags Waiting for Sizing Slips</h2>
+                <p class="mt-0.5 text-[10px] text-zinc-500">Choose an entry to start a slip with the sent quantity, party, quality, and date filled in.</p>
+            </div>
+            <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-zinc-700">{{ $pendingSizingTransactions->count() }} pending</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead><tr class="bg-zinc-50 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                    <th class="px-4 py-3">Reference / Date</th><th class="px-4 py-3">Sizing Party</th><th class="px-4 py-3">Quality</th><th class="px-4 py-3 text-right">Bags Sent</th><th class="px-4 py-3 text-right">Weight</th><th class="px-4 py-3 text-right">Action</th>
+                </tr></thead>
+                <tbody class="divide-y divide-zinc-100">
+                    @foreach($pendingSizingTransactions as $transaction)
+                        @php
+                            $sizingParty = $transaction->destination ?: ($transaction->party_name ?: $transaction->source);
+                            $sizingSlipNo = 'SZ-'.$transaction->reference_no;
+                        @endphp
+                        <tr>
+                            <td class="px-4 py-3"><span class="font-mono font-bold text-zinc-900">{{ $transaction->reference_no ?: 'Bag entry #'.$transaction->id }}</span><span class="mt-0.5 block text-[10px] text-zinc-400">{{ $transaction->transaction_date->format('d M, Y') }}</span></td>
+                            <td class="px-4 py-3 font-semibold text-zinc-700">{{ $sizingParty }}</td>
+                            <td class="px-4 py-3 text-zinc-600">{{ $transaction->quality }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">{{ $transaction->quantity_bags }}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-600">{{ number_format($transaction->quantity_bags * $kilogramsPerBag, 2) }} kg<span class="block text-[10px] text-zinc-400">{{ number_format($transaction->quantity_bags * 100) }} lb</span></td>
+                            <td class="px-4 py-3 text-right"><button type="button" onclick="openSizingSlipFromBag(this)" data-id="{{ $transaction->id }}" data-reference="{{ $transaction->reference_no }}" data-slip="{{ $sizingSlipNo }}" data-party="{{ $sizingParty }}" data-quality="{{ $transaction->quality }}" data-quantity="{{ $transaction->quantity_bags }}" data-date="{{ $transaction->transaction_date->format('Y-m-d') }}" class="rounded-lg bg-zinc-900 px-3 py-2 text-[11px] font-bold text-white hover:bg-zinc-700">Enter sizing slip</button></td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </section>
+    @endif
+
     @if (in_array($page, ['dashboard', 'beams'], true))
     <div class="rounded-3xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
 
@@ -343,7 +378,7 @@
                                 <span class="block text-[10px] font-normal text-zinc-400">{{ number_format($s->total_length_meters, 2) }}m converted</span>
                             </td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->total_ends ? number_format($s->total_ends) : '—' }}</td>
-                            <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->sizing_weight_kg !== null ? number_format($s->sizing_weight_kg, 2).' kg / '.number_format($s->sizing_weight_kg * 2.20462, 2).' lb' : '—' }}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->sizing_weight_pounds !== null ? number_format($s->sizing_weight_pounds * 0.45359237, 2).' kg / '.number_format($s->sizing_weight_pounds, 2).' lb' : '—' }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="12" class="px-4 py-10 text-center text-zinc-400">No sizing slips found. Click "+ New Sizing Slip Entry" to create one.</td></tr>
@@ -392,6 +427,7 @@
 
         <form action="{{ route('sizing.slip.store') }}" method="POST" class="px-6 py-5 space-y-5">
             @csrf
+            <input type="hidden" id="inpBagTransactionId" name="bag_transaction_id">
 
             {{-- ── Section 1: Slip Basics ── --}}
             <div>
@@ -399,22 +435,22 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Sizing Slip # *</label>
-                        <input type="text" name="slip_no" required placeholder="e.g. SZ-2026-092"
+                        <input type="text" id="inpSlipNo" name="slip_no" required placeholder="e.g. SZ-2026-092"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Slip Date *</label>
-                        <input type="date" name="slip_date" required value="{{ date('Y-m-d') }}"
+                        <input type="date" id="inpSlipDate" name="slip_date" required value="{{ date('Y-m-d') }}"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Sizing Unit / Party *</label>
-                        <input type="text" name="sizing_party" required placeholder="e.g. National Sizing Industries"
+                        <input type="text" id="inpSizingParty" name="sizing_party" required placeholder="e.g. National Sizing Industries"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Yarn Quality *</label>
-                        <input type="text" name="yarn_quality" required placeholder="e.g. 30/1 PC Combed"
+                        <input type="text" id="inpYarnQuality" name="yarn_quality" required placeholder="e.g. 30/1 PC Combed"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     </div>
                 </div>
@@ -433,8 +469,9 @@
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Bags Given to Sizing *</label>
                         <input type="number" id="inpBagsAllocated" name="bags_allocated" required min="1"
-                               placeholder="e.g. 75" oninput="calculateSizingBags()"
+                               placeholder="e.g. 75" oninput="calculateSizingBags(); updateSizingWeightPreview()"
                                class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2.5 text-base text-zinc-900 font-mono font-black focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <span id="sizingBagWeightPreview" class="mt-1 block text-[10px] text-zinc-500">100 lb per bag · 0.00 kg total</span>
                     </div>
                     <div class="grid grid-cols-3 gap-3">
                         <div class="rounded-xl border border-zinc-200 bg-white p-3">
@@ -524,8 +561,9 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Sizing Bill Weight (kg)</label>
-                        <input type="number" step="0.01" name="sizing_weight_kg" min="0" placeholder="—"
+                        <input type="number" step="0.01" id="inpSizingWeightKg" name="sizing_weight_kg" min="0" placeholder="—" oninput="updateSizingWeightPreview()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <span id="sizingWeightPoundsPreview" class="mt-1 block text-[10px] text-zinc-500">Stored internally in pounds.</span>
                     </div>
                 </div>
             </div>
@@ -596,6 +634,30 @@
 
 @push('scripts')
 <script>
+    function openSizingSlipFromBag(button) {
+        const quantity = parseInt(button.dataset.quantity) || 0;
+        document.getElementById('inpBagTransactionId').value = button.dataset.id || '';
+        document.getElementById('inpSlipNo').value = button.dataset.slip || '';
+        document.getElementById('inpSlipDate').value = button.dataset.date || '';
+        document.getElementById('inpSizingParty').value = button.dataset.party || '';
+        document.getElementById('inpYarnQuality').value = button.dataset.quality || '';
+        document.getElementById('inpBagsAllocated').value = quantity;
+        document.getElementById('inpBagsUsed').value = quantity;
+        document.getElementById('inpBagsReturned').value = 0;
+        document.getElementById('inpBagsHeld').value = 0;
+        document.getElementById('inpSizingWeightKg').value = (quantity * 100 * 0.45359237).toFixed(2);
+        updateSizingWeightPreview();
+        calculateSizingBags();
+        openModal('modalNewSizingSlip');
+    }
+
+    function updateSizingWeightPreview() {
+        const allocated = parseFloat(document.getElementById('inpBagsAllocated').value) || 0;
+        const enteredKilograms = parseFloat(document.getElementById('inpSizingWeightKg').value) || 0;
+        document.getElementById('sizingBagWeightPreview').innerText = `100 lb per bag · ${(allocated * 100 * 0.45359237).toFixed(2)} kg total`;
+        document.getElementById('sizingWeightPoundsPreview').innerText = `${enteredKilograms.toFixed(2)} kg = ${(enteredKilograms / 0.45359237).toFixed(2)} lb · stored in pounds`;
+    }
+
     function calculateSizingBags() {
         const allocated = parseFloat(document.getElementById('inpBagsAllocated').value) || 0;
         const used = parseFloat(document.getElementById('inpBagsUsed').value) || 0;
