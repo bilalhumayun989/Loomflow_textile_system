@@ -5,26 +5,127 @@
 @section('content')
 <div class="grid grid-cols-1 lg:grid-cols-[250px_minmax(0,1fr)] gap-6 items-start">
     <aside class="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm lg:sticky lg:top-24">
-        <a href="{{ route('bags.index') }}" class="mb-4 flex items-center gap-3 rounded-2xl {{ $page === 'dashboard' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200' }} px-4 py-3 transition-colors">
-            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-700">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+
+        {{-- Dashboard main link --}}
+        <a href="{{ route('bags.index') }}"
+           class="mb-4 flex items-center gap-3 rounded-2xl px-4 py-3 transition-all
+                  {{ $page === 'dashboard'
+                       ? 'bg-zinc-900 text-zinc-50 shadow-md'
+                       : 'bg-zinc-50 text-zinc-700 border border-zinc-200 hover:bg-zinc-100 hover:text-zinc-900' }}">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
+                         {{ $page === 'dashboard' ? 'bg-zinc-700' : 'bg-zinc-200' }}">
+                <svg class="h-5 w-5 {{ $page === 'dashboard' ? 'text-zinc-100' : 'text-zinc-600' }}"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
             </span>
-            <span>
-                <span class="block text-sm font-extrabold">Bags Dashboard</span>
-            </span>
+            <div>
+                <span class="block text-sm font-extrabold leading-tight">Bags Dashboard</span>
+                <span class="block text-[10px] {{ $page === 'dashboard' ? 'text-zinc-400' : 'text-zinc-400' }} mt-0.5">Overview & all stats</span>
+            </div>
         </a>
 
-        <nav class="space-y-2" aria-label="Bags sections">
-            <a href="{{ route('bags.purchases') }}" class="block w-full rounded-2xl {{ $page === 'purchases' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-600 hover:bg-zinc-100' }} px-4 py-3 text-xs font-bold transition-colors">
-                Bags Purchases
+        <div class="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Sections</div>
+
+        <nav class="space-y-1.5" aria-label="Bags sections">
+
+            {{-- Purchases --}}
+            <a href="{{ route('bags.purchases') }}"
+               class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all
+                      {{ $page === 'purchases'
+                           ? 'bg-zinc-900 text-zinc-50 shadow-sm'
+                           : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+                             {{ $page === 'purchases' ? 'bg-zinc-700' : 'bg-zinc-100' }}">
+                    <svg class="h-3.5 w-3.5 {{ $page === 'purchases' ? 'text-zinc-100' : 'text-zinc-500' }}"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </span>
+                <div>
+                    <span class="block leading-tight">Bags Purchases</span>
+                    <span class="block text-[10px] font-normal {{ $page === 'purchases' ? 'text-zinc-400' : 'text-zinc-400' }}">Split history & challan log</span>
+                </div>
+                @if($page === 'purchases')
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0"></span>
+                @endif
             </a>
-            <a href="{{ route('bags.ledger') }}" class="block w-full rounded-2xl {{ $page === 'ledger' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-600 hover:bg-zinc-100' }} px-4 py-3 text-xs font-bold transition-colors">
-                Daily Stock Issuance
+
+            {{-- Daily Issuance --}}
+            <a href="{{ route('bags.ledger') }}"
+               class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all
+                      {{ $page === 'ledger'
+                           ? 'bg-zinc-900 text-zinc-50 shadow-sm'
+                           : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+                             {{ $page === 'ledger' ? 'bg-zinc-700' : 'bg-zinc-100' }}">
+                    <svg class="h-3.5 w-3.5 {{ $page === 'ledger' ? 'text-zinc-100' : 'text-zinc-500' }}"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                </span>
+                <div>
+                    <span class="block leading-tight">Daily Stock Issuance</span>
+                    <span class="block text-[10px] font-normal {{ $page === 'ledger' ? 'text-zinc-400' : 'text-zinc-400' }}">Factory to sizing ledger</span>
+                </div>
+                @if($page === 'ledger')
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0"></span>
+                @endif
             </a>
-            <a href="{{ route('bags.sizing-usage') }}" class="block w-full rounded-2xl {{ $page === 'sizing' ? 'bg-zinc-100 text-zinc-800' : 'text-zinc-600 hover:bg-zinc-100' }} px-4 py-3 text-xs font-bold transition-colors">
-                Sizing Bag Consumption
+
+            {{-- Sizing Consumption --}}
+            <a href="{{ route('bags.sizing-usage') }}"
+               class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all
+                      {{ $page === 'sizing'
+                           ? 'bg-zinc-900 text-zinc-50 shadow-sm'
+                           : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+                             {{ $page === 'sizing' ? 'bg-zinc-700' : 'bg-zinc-100' }}">
+                    <svg class="h-3.5 w-3.5 {{ $page === 'sizing' ? 'text-zinc-100' : 'text-zinc-500' }}"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </span>
+                <div>
+                    <span class="block leading-tight">Sizing Bag Consumption</span>
+                    <span class="block text-[10px] font-normal {{ $page === 'sizing' ? 'text-zinc-400' : 'text-zinc-400' }}">Usage, returns & held bags</span>
+                </div>
+                @if($page === 'sizing')
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0"></span>
+                @endif
             </a>
+
         </nav>
+
+        {{-- Quick actions at bottom of sidebar --}}
+        <div class="mt-5 pt-4 border-t border-zinc-100 space-y-1.5">
+            <div class="px-1 text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Quick Actions</div>
+            <button type="button" onclick="openModal('modalNewPurchase')"
+                    class="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[11px] font-bold text-zinc-700 hover:bg-zinc-100 transition-colors">
+                <svg class="h-3.5 w-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                New Purchase
+            </button>
+            <button type="button" onclick="openModal('modalIssueStock')"
+                    class="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[11px] font-bold text-zinc-700 hover:bg-zinc-100 transition-colors">
+                <svg class="h-3.5 w-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                Issue Bags
+            </button>
+            <button type="button" onclick="openModal('modalReturnStock')"
+                    class="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[11px] font-bold text-zinc-700 hover:bg-zinc-100 transition-colors">
+                <svg class="h-3.5 w-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                </svg>
+                Receive Return
+            </button>
+        </div>
     </aside>
 
     <div class="min-w-0 space-y-6">
@@ -107,164 +208,235 @@
     </div>
     @endif
 
-    <!-- Bags section content -->
-    <div class="glass-card rounded-3xl p-6 border border-zinc-200">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="text-lg font-extrabold text-zinc-900">{{ $page === 'dashboard' ? 'Recent Bags Activity' : ['purchases' => 'Bags Purchases & Split History', 'ledger' => 'Daily Stock Issuance & Ledger Log', 'sizing' => 'Sizing Bag Consumption & Returns'][$page] }}</h2>
-            <div class="text-xs text-zinc-400 font-mono">{{ $page === 'dashboard' ? 'Latest records' : 'Complete history' }}</div>
+    {{-- ============================================================
+         SECTION 1 — Bag Purchases
+    ============================================================ --}}
+    @if (in_array($page, ['dashboard', 'purchases'], true))
+    <div class="rounded-3xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+
+        {{-- Card header --}}
+        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-zinc-50">
+            <div class="flex items-center gap-2.5">
+                <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900">
+                    <svg class="h-4 w-4 text-zinc-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </span>
+                <div>
+                    <h2 class="text-sm font-extrabold text-zinc-900 leading-tight">
+                        {{ $page === 'dashboard' ? 'Recent Purchases' : 'Bags Purchases & Split History' }}
+                    </h2>
+                    <p class="text-[10px] text-zinc-400 mt-0.5">Challan-wise purchase log with sizing / factory split</p>
+                </div>
+            </div>
+            @if($page === 'dashboard')
+                <a href="{{ route('bags.purchases') }}" class="text-[11px] font-bold text-zinc-500 hover:text-zinc-900 transition-colors">
+                    View all &rarr;
+                </a>
+            @endif
         </div>
 
-        <!-- TAB 1: PURCHASES & SPLIT -->
-        @if (in_array($page, ['dashboard', 'purchases'], true))
-        <section class="mb-8">
-            @if ($page === 'dashboard')
-                <h3 class="mb-3 text-sm font-bold text-zinc-700">Recent Purchases</h3>
-            @endif
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead>
-                        <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
-                            <th class="p-3">Challan #</th>
-                            <th class="p-3">Purchase Date</th>
-                            <th class="p-3">Spinning Supplier</th>
-                            <th class="p-3">Quality / Count</th>
-                            <th class="p-3 text-right">Total Bags</th>
-                            <th class="p-3 text-center bg-zinc-100 text-zinc-600 border-x border-zinc-200">To Sizing</th>
-                            <th class="p-3 text-center bg-zinc-100 text-zinc-600 border-r border-zinc-200">To Factory Store</th>
-                            <th class="p-3 text-right">Rate / Bag</th>
-                            <th class="p-3 text-right">Total Amount</th>
+        {{-- Table --}}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
+                        <th class="px-4 py-3">Challan #</th>
+                        <th class="px-4 py-3">Purchase Date</th>
+                        <th class="px-4 py-3">Spinning Supplier</th>
+                        <th class="px-4 py-3">Quality / Count</th>
+                        <th class="px-4 py-3 text-right">Total Bags</th>
+                        <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-x border-zinc-200">To Sizing</th>
+                        <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-r border-zinc-200">To Factory Store</th>
+                        <th class="px-4 py-3 text-right">Rate / Bag</th>
+                        <th class="px-4 py-3 text-right">Total Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-100">
+                    @forelse($purchases as $p)
+                        <tr class="hover:bg-zinc-50 transition-colors">
+                            <td class="px-4 py-3 font-mono font-bold text-zinc-900">{{ $p->challan_no }}</td>
+                            <td class="px-4 py-3 text-zinc-500">{{ $p->purchase_date->format('d M, Y') }}</td>
+                            <td class="px-4 py-3 font-semibold text-zinc-800">{{ $p->supplier_name }}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700 font-mono text-[11px]">{{ $p->quality }}</span></td>
+                            <td class="px-4 py-3 text-right font-black text-zinc-900">{{ $p->total_bags }}</td>
+                            <td class="px-4 py-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-x border-zinc-200">{{ $p->bags_to_sizing }}</td>
+                            <td class="px-4 py-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-r border-zinc-200">{{ $p->bags_to_factory }}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-500">Rs. {{ number_format($p->rate_per_bag, 2) }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">Rs. {{ number_format($p->total_amount, 2) }}</td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-100">
-                        @forelse($purchases as $p)
-                            <tr class="hover:bg-zinc-50 transition-colors">
-                                <td class="p-3 font-mono font-bold text-zinc-900">{{ $p->challan_no }}</td>
-                                <td class="p-3 text-zinc-500">{{ $p->purchase_date->format('d M, Y') }}</td>
-                                <td class="p-3 font-semibold text-zinc-800">{{ $p->supplier_name }}</td>
-                                <td class="p-3"><span class="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700 font-mono text-[11px]">{{ $p->quality }}</span></td>
-                                <td class="p-3 text-right font-black text-zinc-900">{{ $p->total_bags }}</td>
-                                <td class="p-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-x border-zinc-200">{{ $p->bags_to_sizing }}</td>
-                                <td class="p-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-r border-zinc-200">{{ $p->bags_to_factory }}</td>
-                                <td class="p-3 text-right font-mono text-zinc-500">Rs. {{ number_format($p->rate_per_bag, 2) }}</td>
-                                <td class="p-3 text-right font-mono font-bold text-zinc-900">Rs. {{ number_format($p->total_amount, 2) }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="9" class="p-6 text-center text-zinc-400">No bag purchases entered yet.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @if ($page === 'purchases')
-                <div class="mt-4">{{ $purchases->links() }}</div>
-            @endif
-        </section>
-        @endif
+                    @empty
+                        <tr><td colspan="9" class="px-4 py-8 text-center text-zinc-400">No bag purchases entered yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
 
-        <!-- TAB 2: DAILY STOCK ISSUANCE & LEDGER -->
-        @if (in_array($page, ['dashboard', 'ledger'], true))
-        <section class="mb-8">
-            @if ($page === 'dashboard')
-                <h3 class="mb-3 text-sm font-bold text-zinc-700">Recent Stock Movements</h3>
-            @endif
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead>
-                        <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
-                            <th class="p-3">Date</th><th class="p-3">Type</th><th class="p-3">Ref #</th>
-                            <th class="p-3">Quality</th><th class="p-3 text-right">Quantity</th>
-                            <th class="p-3">Source</th><th class="p-3">Destination</th>
-                            <th class="p-3">Party / Mill</th><th class="p-3">Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-100">
-                        @forelse($transactions as $tx)
-                            <tr class="hover:bg-zinc-50 transition-colors">
-                                <td class="p-3 text-zinc-500 font-mono">{{ $tx->transaction_date->format('d M, Y') }}</td>
-                                <td class="p-3">
-                                    @if($tx->transaction_type === 'purchase_factory')
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200 text-zinc-700 border border-zinc-300">Factory Purchase</span>
-                                    @elseif($tx->transaction_type === 'purchase_sizing')
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200 text-zinc-700 border border-zinc-300">Direct Sizing</span>
-                                    @elseif($tx->transaction_type === 'issue_to_sizing')
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-300 text-zinc-800 border border-zinc-400">Issued To Sizing</span>
-                                    @elseif($tx->transaction_type === 'return_from_sizing')
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">Returned to Factory</span>
-                                    @else
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-500">{{ $tx->transaction_type }}</span>
-                                    @endif
-                                </td>
-                                <td class="p-3 font-mono font-semibold text-zinc-900">{{ $tx->reference_no ?? '-' }}</td>
-                                <td class="p-3 font-medium text-zinc-700">{{ $tx->quality }}</td>
-                                <td class="p-3 text-right font-mono font-bold text-zinc-900">{{ $tx->quantity_bags }} Bags</td>
-                                <td class="p-3 text-zinc-500">{{ $tx->source }}</td>
-                                <td class="p-3 text-zinc-700 font-semibold">{{ $tx->destination }}</td>
-                                <td class="p-3 text-zinc-600">{{ $tx->party_name ?? '-' }}</td>
-                                <td class="p-3 text-zinc-400 italic">{{ $tx->notes ?? '-' }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="9" class="p-6 text-center text-zinc-400">No stock transactions logged yet.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @if ($page === 'ledger')
-                <div class="mt-4">{{ $transactions->links() }}</div>
-            @endif
-        </section>
-        @endif
-
-        <!-- TAB 3: SIZING BAG CONSUMPTION -->
-        @if (in_array($page, ['dashboard', 'sizing'], true))
-        <section>
-            @if ($page === 'dashboard')
-                <h3 class="mb-3 text-sm font-bold text-zinc-700">Recent Sizing Usage & Returns</h3>
-            @endif
-            <div class="mb-4 p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-zinc-700 text-xs flex items-center justify-between">
-                <div><strong>Sizing Bags Reconciliation:</strong> See how many bags were given, used in beams, and where unused bags are.</div>
-                <a href="{{ route('sizing.index') }}" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 font-bold text-xs transition-colors shrink-0">Open Sizing Module &rarr;</a>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead>
-                        <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
-                            <th class="p-3">Sizing Slip #</th><th class="p-3">Sizing Party</th><th class="p-3">Quality</th>
-                            <th class="p-3 text-center">Bags Allocated</th>
-                            <th class="p-3 text-center bg-zinc-100 text-zinc-600">Used in Beams</th>
-                            <th class="p-3 text-center bg-zinc-100 text-zinc-600">Returned to Factory</th>
-                            <th class="p-3 text-center bg-zinc-100 text-zinc-600">Held With Sizing</th>
-                            <th class="p-3 text-center">Beams Made</th>
-                            <th class="p-3">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-100">
-                        @forelse($sizingSlips as $slip)
-                            <tr class="hover:bg-zinc-50 transition-colors">
-                                <td class="p-3 font-mono font-bold text-zinc-900">{{ $slip->slip_no }}</td>
-                                <td class="p-3 font-semibold text-zinc-800">{{ $slip->sizing_party }}</td>
-                                <td class="p-3 text-zinc-600">{{ $slip->yarn_quality }}</td>
-                                <td class="p-3 text-center font-bold text-zinc-900 font-mono">{{ $slip->bags_allocated }}</td>
-                                <td class="p-3 text-center font-bold text-zinc-800 bg-zinc-50 font-mono">{{ $slip->bags_used }}</td>
-                                <td class="p-3 text-center font-bold text-zinc-700 bg-zinc-50 font-mono">{{ $slip->bags_returned_to_factory }}</td>
-                                <td class="p-3 text-center font-bold text-zinc-700 bg-zinc-50 font-mono">{{ $slip->bags_held_with_sizing }}</td>
-                                <td class="p-3 text-center font-bold text-zinc-700">{{ $slip->total_beams }} Beams ({{ number_format($slip->total_length_meters) }}m)</td>
-                                <td class="p-3">
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase {{ $slip->status === 'completed' ? 'bg-zinc-200 text-zinc-700' : 'bg-zinc-100 text-zinc-500' }}">
-                                        {{ $slip->status }}
-                                    </span>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="9" class="p-6 text-center text-zinc-400">No sizing slips found.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @if ($page === 'sizing')
-                <div class="mt-4">{{ $sizingSlips->links() }}</div>
-            @endif
-        </section>
+        @if($page === 'purchases')
+            <div class="px-6 py-4 border-t border-zinc-100">{{ $purchases->links() }}</div>
         @endif
     </div>
+    @endif
+
+
+    {{-- ============================================================
+         SECTION 2 — Daily Stock Issuance Ledger
+    ============================================================ --}}
+    @if (in_array($page, ['dashboard', 'ledger'], true))
+    <div class="rounded-3xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+
+        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-zinc-50">
+            <div class="flex items-center gap-2.5">
+                <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900">
+                    <svg class="h-4 w-4 text-zinc-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                </span>
+                <div>
+                    <h2 class="text-sm font-extrabold text-zinc-900 leading-tight">
+                        {{ $page === 'dashboard' ? 'Recent Stock Movements' : 'Daily Stock Issuance & Ledger Log' }}
+                    </h2>
+                    <p class="text-[10px] text-zinc-400 mt-0.5">Factory godown → sizing mills, returns, and all bag movements</p>
+                </div>
+            </div>
+            @if($page === 'dashboard')
+                <a href="{{ route('bags.ledger') }}" class="text-[11px] font-bold text-zinc-500 hover:text-zinc-900 transition-colors">
+                    View all &rarr;
+                </a>
+            @endif
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
+                        <th class="px-4 py-3">Date</th><th class="px-4 py-3">Type</th><th class="px-4 py-3">Ref #</th>
+                        <th class="px-4 py-3">Quality</th><th class="px-4 py-3 text-right">Qty</th>
+                        <th class="px-4 py-3">Source</th><th class="px-4 py-3">Destination</th>
+                        <th class="px-4 py-3">Party / Mill</th><th class="px-4 py-3">Notes</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-100">
+                    @forelse($transactions as $tx)
+                        <tr class="hover:bg-zinc-50 transition-colors">
+                            <td class="px-4 py-3 text-zinc-500 font-mono">{{ $tx->transaction_date->format('d M, Y') }}</td>
+                            <td class="px-4 py-3">
+                                @if($tx->transaction_type === 'purchase_factory')
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200 text-zinc-700 border border-zinc-300">Factory Purchase</span>
+                                @elseif($tx->transaction_type === 'purchase_sizing')
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200 text-zinc-700 border border-zinc-300">Direct Sizing</span>
+                                @elseif($tx->transaction_type === 'issue_to_sizing')
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-900 text-zinc-50">Issued To Sizing</span>
+                                @elseif($tx->transaction_type === 'return_from_sizing')
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">Returned</span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-500">{{ $tx->transaction_type }}</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 font-mono font-semibold text-zinc-900">{{ $tx->reference_no ?? '-' }}</td>
+                            <td class="px-4 py-3 font-medium text-zinc-700">{{ $tx->quality }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">{{ $tx->quantity_bags }} Bags</td>
+                            <td class="px-4 py-3 text-zinc-500">{{ $tx->source }}</td>
+                            <td class="px-4 py-3 text-zinc-700 font-semibold">{{ $tx->destination }}</td>
+                            <td class="px-4 py-3 text-zinc-600">{{ $tx->party_name ?? '-' }}</td>
+                            <td class="px-4 py-3 text-zinc-400 italic">{{ $tx->notes ?? '-' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="9" class="px-4 py-8 text-center text-zinc-400">No stock transactions logged yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($page === 'ledger')
+            <div class="px-6 py-4 border-t border-zinc-100">{{ $transactions->links() }}</div>
+        @endif
+    </div>
+    @endif
+
+
+    {{-- ============================================================
+         SECTION 3 — Sizing Bag Consumption & Returns
+    ============================================================ --}}
+    @if (in_array($page, ['dashboard', 'sizing'], true))
+    <div class="rounded-3xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+
+        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-zinc-50">
+            <div class="flex items-center gap-2.5">
+                <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900">
+                    <svg class="h-4 w-4 text-zinc-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </span>
+                <div>
+                    <h2 class="text-sm font-extrabold text-zinc-900 leading-tight">
+                        {{ $page === 'dashboard' ? 'Recent Sizing Usage & Returns' : 'Sizing Bag Consumption & Returns' }}
+                    </h2>
+                    <p class="text-[10px] text-zinc-400 mt-0.5">Bags used in beams, returned to factory, or held with sizing persons</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                @if($page === 'dashboard')
+                    <a href="{{ route('bags.sizing-usage') }}" class="text-[11px] font-bold text-zinc-500 hover:text-zinc-900 transition-colors">
+                        View all &rarr;
+                    </a>
+                @endif
+                <a href="{{ route('sizing.index') }}" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 font-bold text-[11px] transition-colors">
+                    Open Sizing &rarr;
+                </a>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
+                        <th class="px-4 py-3">Sizing Slip #</th>
+                        <th class="px-4 py-3">Sizing Party</th>
+                        <th class="px-4 py-3">Quality</th>
+                        <th class="px-4 py-3 text-center">Bags Allocated</th>
+                        <th class="px-4 py-3 text-center bg-zinc-900/5 text-zinc-700 border-x border-zinc-200">Used in Beams</th>
+                        <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-r border-zinc-200">Returned to Factory</th>
+                        <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-r border-zinc-200">Held With Sizing</th>
+                        <th class="px-4 py-3 text-center">Beams Made</th>
+                        <th class="px-4 py-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-100">
+                    @forelse($sizingSlips as $slip)
+                        <tr class="hover:bg-zinc-50 transition-colors">
+                            <td class="px-4 py-3 font-mono font-bold text-zinc-900">{{ $slip->slip_no }}</td>
+                            <td class="px-4 py-3 font-semibold text-zinc-800">{{ $slip->sizing_party }}</td>
+                            <td class="px-4 py-3 text-zinc-600">{{ $slip->yarn_quality }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-900 font-mono">{{ $slip->bags_allocated }}</td>
+                            <td class="px-4 py-3 text-center font-black text-zinc-900 bg-zinc-50 border-x border-zinc-200 font-mono">{{ $slip->bags_used }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-700 bg-zinc-50 border-r border-zinc-200 font-mono">{{ $slip->bags_returned_to_factory }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-700 bg-zinc-50 border-r border-zinc-200 font-mono">{{ $slip->bags_held_with_sizing }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-700">{{ $slip->total_beams }} Beams ({{ number_format($slip->total_length_meters) }}m)</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+                                             {{ $slip->status === 'completed'
+                                                  ? 'bg-zinc-900 text-zinc-50'
+                                                  : 'bg-zinc-100 text-zinc-500 border border-zinc-200' }}">
+                                    {{ $slip->status }}
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="9" class="px-4 py-8 text-center text-zinc-400">No sizing slips found.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($page === 'sizing')
+            <div class="px-6 py-4 border-t border-zinc-100">{{ $sizingSlips->links() }}</div>
+        @endif
+    </div>
+    @endif
 
     </div>
 </div>
