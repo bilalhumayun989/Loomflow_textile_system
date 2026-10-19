@@ -86,7 +86,6 @@
                             </div>
                         </a>
 
-                        @if (!str_starts_with(Route::currentRouteName() ?? '', 'bags'))
                         <!-- MODULE SWITCHER DROPDOWN -->
                         <div class="relative ml-4" id="moduleSwitcherContainer">
                             @php
@@ -231,7 +230,6 @@
                                 </div>
                             </div>
                         </div>
-                        @endif
                     </div>
 
                     <!-- User Profile & Action Bar -->
