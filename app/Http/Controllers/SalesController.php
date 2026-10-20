@@ -167,21 +167,56 @@ class SalesController extends Controller
     {
         $validated = $request->validate([
             'contract_no' => 'required|string|max:100|unique:sales_contracts,contract_no',
+            'party_contract_no' => 'nullable|string|max:80',
+            'contract_type' => 'required|in:Conversion,Grey Sale',
+            'loom_type' => 'nullable|string|max:40',
+            'buyer_code' => 'nullable|string|max:40',
             'buyer_name' => 'required|string|max:150',
             'buyer_phone' => 'nullable|string|max:50',
+            'buyer_gst' => 'nullable|string|max:60',
             'fabric_quality' => 'required|string|max:150',
+            'quality_code' => 'nullable|string|max:40',
+            'contract_quality' => 'nullable|string|max:120',
+            'contract_quality_width' => 'nullable|numeric|gt:0|max:100000',
+            'panna' => 'nullable|numeric|gt:0|max:100000',
             'total_meters' => 'required|numeric|min:100',
-            'rate_per_meter' => 'required|numeric|min:1',
+            'read' => 'required|numeric|gt:0|max:100000',
+            'pick' => 'required|numeric|gt:0|max:100000',
+            'warp_count' => 'required|numeric|gt:0|max:100000',
+            'weft_count' => 'required|numeric|gt:0|max:100000',
+            'width' => 'required|numeric|gt:0|max:100000',
+            'yarn_warp_rate' => 'required|numeric|min:0|max:100000000',
+            'yarn_weft_rate' => 'required|numeric|min:0|max:100000000',
+            'conversion_rate' => 'required|numeric|min:0|max:100000000',
+            'broker_code' => 'nullable|string|max:40',
+            'broker_name' => 'nullable|string|max:120',
+            'broker_commission_per_meter' => 'nullable|numeric|min:0|max:100000000',
+            'kp_percentage' => 'nullable|numeric|between:0,100',
+            'kp_days' => 'nullable|integer|between:0,3650',
+            'pp_percentage' => 'nullable|numeric|between:0,100',
+            'pp_days' => 'nullable|integer|between:0,3650',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'notes' => 'nullable|string',
+            'delivery_instructions' => 'nullable|string|max:2000',
+            'payment_instructions' => 'nullable|string|max:2000',
+            'quality_instructions' => 'nullable|string|max:2000',
+            'other_instructions' => 'nullable|string|max:2000',
+            'notes' => 'nullable|string|max:2000',
         ]);
 
-        $totalAmount = $validated['total_meters'] * $validated['rate_per_meter'];
-        $validated['total_amount'] = $totalAmount;
+        $calculatedValues = SalesContract::calculateContractValues($validated);
+        $validated = array_merge($validated, $calculatedValues);
         $validated['delivered_meters'] = 0;
         $validated['remaining_meters'] = $validated['total_meters'];
         $validated['status'] = 'active';
+        $validated['contract_type'] = $validated['contract_type'] ?? 'Conversion';
+        $validated['loom_type'] = $validated['loom_type'] ?? null;
+        $validated['broker_commission_per_meter'] = $validated['broker_commission_per_meter'] ?? 0;
+        $validated['kp_percentage'] = $validated['kp_percentage'] ?? 0;
+        $validated['kp_days'] = $validated['kp_days'] ?? 0;
+        $validated['pp_percentage'] = $validated['pp_percentage'] ?? 0;
+        $validated['pp_days'] = $validated['pp_days'] ?? 0;
+        $validated['panna'] = $validated['panna'] ?? 1;
 
         $contract = SalesContract::create($validated);
 

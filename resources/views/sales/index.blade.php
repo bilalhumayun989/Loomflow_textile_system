@@ -387,6 +387,34 @@
                             </div>
                         </div>
 
+                        <details class="rounded-xl border border-zinc-200 bg-white">
+                            <summary class="cursor-pointer px-3 py-2.5 text-[11px] font-bold text-zinc-700">View contract details and costing</summary>
+                            <div class="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-zinc-100 px-3 py-3 text-[10px] sm:grid-cols-3">
+                                <div><span class="text-zinc-400">Contract type / loom</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->contract_type ?? '—' }} / {{ $cnt->loom_type ?? '—' }}</strong></div>
+                                <div><span class="text-zinc-400">Contract date / delivery</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->start_date?->format('d M Y') ?? '—' }} / {{ $cnt->end_date?->format('d M Y') ?? '—' }}</strong></div>
+                                <div><span class="text-zinc-400">Party contract #</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->party_contract_no ?? '—' }}</strong></div>
+                                <div><span class="text-zinc-400">Buyer code / GST</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->buyer_code ?? '—' }} / {{ $cnt->buyer_gst ?? '—' }}</strong></div>
+                                <div><span class="text-zinc-400">Quality code / detail</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->quality_code ?? '—' }} / {{ $cnt->contract_quality ?? '—' }}</strong></div>
+                                <div><span class="text-zinc-400">Quality width / panna</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->contract_quality_width ?? '—' }} in / {{ $cnt->panna ?? '—' }}</strong></div>
+                                <div><span class="text-zinc-400">Read / pick</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->read ?? '—' }} / {{ $cnt->pick ?? '—' }}</strong></div>
+                                <div><span class="text-zinc-400">Warp / weft count</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->warp_count ?? '—' }} / {{ $cnt->weft_count ?? '—' }}</strong></div>
+                                <div><span class="text-zinc-400">Fabric width / GSM</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->width ?? '—' }} in / {{ $cnt->gsm ?? '—' }}</strong></div>
+                                <div><span class="text-zinc-400">Warp / weft weight</span><strong class="mt-0.5 block text-zinc-800">{{ number_format((float) ($cnt->warp_weight_1m ?? 0), 4) }} / {{ number_format((float) ($cnt->weft_weight_1m ?? 0), 4) }} lb/m</strong></div>
+                                <div><span class="text-zinc-400">Warp / weft yarn rate</span><strong class="mt-0.5 block text-zinc-800">Rs. {{ number_format((float) ($cnt->yarn_warp_rate ?? 0), 4) }} / Rs. {{ number_format((float) ($cnt->yarn_weft_rate ?? 0), 4) }} per lb</strong></div>
+                                <div><span class="text-zinc-400">Conversion rate / pick</span><strong class="mt-0.5 block text-zinc-800">Rs. {{ number_format((float) ($cnt->conversion_rate ?? 0), 4) }}</strong></div>
+                                <div><span class="text-zinc-400">Weight per 40m (warp / weft)</span><strong class="mt-0.5 block text-zinc-800">{{ number_format((float) ($cnt->warp_wt_40m ?? 0), 4) }} / {{ number_format((float) ($cnt->weft_wt_40m ?? 0), 4) }} lb</strong></div>
+                                <div><span class="text-zinc-400">Total yarn weight / meter</span><strong class="mt-0.5 block text-zinc-800">{{ number_format((float) ($cnt->total_weight_1m_lb ?? 0), 4) }} lb · {{ number_format((float) ($cnt->total_weight_1m_kg ?? 0), 4) }} kg</strong></div>
+                                <div><span class="text-zinc-400">Warp / weft bags</span><strong class="mt-0.5 block text-zinc-800">{{ number_format((float) ($cnt->warp_bags ?? 0), 2) }} / {{ number_format((float) ($cnt->weft_bags ?? 0), 2) }}</strong></div>
+                                <div><span class="text-zinc-400">Yarn / conversion total</span><strong class="mt-0.5 block text-zinc-800">Rs. {{ number_format((float) ($cnt->yarn_value ?? 0), 2) }} / Rs. {{ number_format((float) ($cnt->conv_value ?? 0), 2) }}</strong></div>
+                                <div><span class="text-zinc-400">Estimated sales tax</span><strong class="mt-0.5 block text-zinc-800">Rs. {{ number_format((float) ($cnt->sales_tax_amount ?? 0), 2) }}</strong></div>
+                                <div><span class="text-zinc-400">Broker commission (separate)</span><strong class="mt-0.5 block text-zinc-800">Rs. {{ number_format((float) ($cnt->broker_commission_per_meter ?? 0) * (float) $cnt->total_meters, 2) }}</strong></div>
+                                <div><span class="text-zinc-400">KP / PP</span><strong class="mt-0.5 block text-zinc-800">{{ $cnt->kp_percentage ?? 0 }}% / {{ $cnt->kp_days ?? 0 }} days · {{ $cnt->pp_percentage ?? 0 }}% / {{ $cnt->pp_days ?? 0 }} days</strong></div>
+                                @foreach(['Delivery' => $cnt->delivery_instructions, 'Payment' => $cnt->payment_instructions, 'Quality' => $cnt->quality_instructions, 'Other' => $cnt->other_instructions] as $instructionType => $instruction)
+                                    @if($instruction)<div class="sm:col-span-3"><span class="text-zinc-400">{{ $instructionType }} instructions</span><strong class="mt-0.5 block whitespace-normal text-zinc-800">{{ $instruction }}</strong></div>@endif
+                                @endforeach
+                            </div>
+                        </details>
+
                         @if($cnt->notes)
                             <div class="text-[11px] text-zinc-400 italic bg-white border border-zinc-200 px-3 py-2 rounded-xl">
                                 {{ $cnt->notes }}
@@ -571,84 +599,119 @@
 {{-- ============================================================
      MODAL 2: NEW CONTRACT
 ============================================================ --}}
-<div id="modalNewContract" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white border border-zinc-200 rounded-3xl max-w-lg w-full p-6 shadow-xl relative my-8">
-        <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
+<div id="modalNewContract" class="fixed inset-0 z-50 hidden flex items-center justify-center overflow-y-auto bg-zinc-950/60 p-3 backdrop-blur-sm sm:p-6">
+    <div class="my-auto max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white shadow-2xl">
+        <div class="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-6 py-4 backdrop-blur">
             <div>
-                <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-zinc-700"></span>
-                    Register Multi-Quality Contract
-                </h3>
-                <p class="text-xs text-zinc-400 mt-0.5">Long-term buyer contract with agreed meters and rate</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Sales · Contract</p>
+                <h3 class="mt-1 text-lg font-extrabold text-zinc-900">Create Grey Sale / Conversion Contract</h3>
+                <p class="mt-0.5 text-xs text-zinc-500">Contract pricing and fabric estimates are calculated from the fields below.</p>
             </div>
-            <button type="button" onclick="closeModal('modalNewContract')" class="text-zinc-400 hover:text-zinc-900 p-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+            <button type="button" onclick="closeModal('modalNewContract')" class="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Close contract form">✕</button>
         </div>
-        <form action="{{ route('sales.contract.store') }}" method="POST" class="mt-4 space-y-4">
+        <form action="{{ route('sales.contract.store') }}" method="POST" class="space-y-6 px-5 py-5 sm:px-6">
             @csrf
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Contract # *</label>
-                    <input type="text" name="contract_no" required placeholder="e.g. CNT-2026-045"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+            @if($errors->hasAny(['contract_no', 'party_contract_no', 'contract_type', 'loom_type', 'buyer_code', 'buyer_name', 'buyer_phone', 'buyer_gst', 'fabric_quality', 'quality_code', 'contract_quality', 'contract_quality_width', 'panna', 'total_meters', 'read', 'pick', 'warp_count', 'weft_count', 'width', 'yarn_warp_rate', 'yarn_weft_rate', 'conversion_rate', 'broker_code', 'broker_name', 'broker_commission_per_meter', 'kp_percentage', 'kp_days', 'pp_percentage', 'pp_days', 'start_date', 'end_date', 'delivery_instructions', 'payment_instructions', 'quality_instructions', 'other_instructions', 'notes']) )
+                <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700" role="alert">
+                    @foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Start Date *</label>
-                    <input type="date" name="start_date" required value="{{ date('Y-m-d') }}"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+            @endif
+
+            <section>
+                <h4 class="mb-3 text-xs font-extrabold uppercase tracking-wider text-zinc-500">Contract and delivery</h4>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <label class="text-xs font-semibold text-zinc-600">Contract # *<input name="contract_no" required maxlength="100" value="{{ old('contract_no') }}" placeholder="e.g. CNT-2026-045" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Party Contract #<input name="party_contract_no" maxlength="80" value="{{ old('party_contract_no') }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Contract Date *<input type="date" name="start_date" required value="{{ old('start_date', date('Y-m-d')) }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Delivery Date<input type="date" name="end_date" value="{{ old('end_date', date('Y-m-d', strtotime('+30 days'))) }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Contract Type *<select name="contract_type" required class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"><option value="Conversion" @selected(old('contract_type', 'Conversion') === 'Conversion')>Conversion</option><option value="Grey Sale" @selected(old('contract_type') === 'Grey Sale')>Grey Sale</option></select></label>
+                    <label class="text-xs font-semibold text-zinc-600">Loom Type<select name="loom_type" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"><option value="">Select loom type</option>@foreach(['Shuttleless', 'Shuttle', 'Rapier', 'Air jet', 'Water jet'] as $loomType)<option value="{{ $loomType }}" @selected(old('loom_type') === $loomType)>{{ $loomType }}</option>@endforeach</select></label>
                 </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Buyer / Mill Name *</label>
-                    <input type="text" name="buyer_name" required placeholder="e.g. Crescent Garments Ltd"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+            </section>
+
+            <section>
+                <h4 class="mb-3 text-xs font-extrabold uppercase tracking-wider text-zinc-500">Buyer and broker</h4>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <label class="text-xs font-semibold text-zinc-600">Buyer Name *<input name="buyer_name" required maxlength="150" value="{{ old('buyer_name') }}" placeholder="Buyer / mill" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Buyer Code<input name="buyer_code" maxlength="40" value="{{ old('buyer_code') }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Buyer Phone<input name="buyer_phone" maxlength="50" value="{{ old('buyer_phone') }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">GST / Tax #<input name="buyer_gst" maxlength="60" value="{{ old('buyer_gst') }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Broker Name<input name="broker_name" maxlength="120" value="{{ old('broker_name') }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Broker Code<input name="broker_code" maxlength="40" value="{{ old('broker_code') }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Commission / Meter (Rs.)<input type="number" step="0.0001" min="0" id="inpContractCommission" name="broker_commission_per_meter" value="{{ old('broker_commission_per_meter', 0) }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Buyer Phone</label>
-                    <input type="text" name="buyer_phone" placeholder="e.g. +92 321 4455667"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+            </section>
+
+            <section>
+                <h4 class="mb-3 text-xs font-extrabold uppercase tracking-wider text-zinc-500">Fabric quality</h4>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <label class="text-xs font-semibold text-zinc-600">Fabric Quality / Stock Quality *<input name="fabric_quality" required maxlength="150" list="contractFabricQualities" value="{{ old('fabric_quality') }}" placeholder="Enter or select quality" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"><datalist id="contractFabricQualities">@foreach($fabrics as $fabric)<option value="{{ $fabric->quality_name }}">Open {{ number_format($fabric->available_open_meters) }}m</option>@endforeach</datalist></label>
+                    <label class="text-xs font-semibold text-zinc-600">Quality Code<input name="quality_code" maxlength="40" value="{{ old('quality_code') }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Contract Quality Detail<input name="contract_quality" maxlength="120" value="{{ old('contract_quality') }}" placeholder="e.g. 52/1 cotton twill" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Quality Width (inches)<input type="number" step="0.001" min="0.001" name="contract_quality_width" value="{{ old('contract_quality_width') }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Panna<input type="number" step="0.001" min="0.001" name="panna" value="{{ old('panna', 1) }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
                 </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-zinc-600 mb-1">Fabric Quality *</label>
-                <select name="fabric_quality" required
-                        class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                    @foreach($fabrics as $f)
-                        <option value="{{ $f->quality_name }}">{{ $f->quality_name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Agreed Meters *</label>
-                    <input type="number" step="0.01" name="total_meters" required min="100" placeholder="10000"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+            </section>
+
+            <section>
+                <h4 class="mb-3 text-xs font-extrabold uppercase tracking-wider text-zinc-500">Quantity, construction and costing inputs</h4>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <label class="text-xs font-semibold text-zinc-600">Agreed Meters *<input type="number" step="0.01" min="100" required id="inpContractMeters" name="total_meters" value="{{ old('total_meters') }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 font-mono text-sm font-bold text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Read / EPI *<input type="number" step="0.001" min="0.001" required id="inpContractRead" name="read" value="{{ old('read') }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Pick / PPI *<input type="number" step="0.001" min="0.001" required id="inpContractPick" name="pick" value="{{ old('pick') }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Warp Count *<input type="number" step="0.0001" min="0.0001" required id="inpContractWarpCount" name="warp_count" value="{{ old('warp_count') }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Weft Count *<input type="number" step="0.0001" min="0.0001" required id="inpContractWeftCount" name="weft_count" value="{{ old('weft_count') }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Fabric Width (inches) *<input type="number" step="0.001" min="0.001" required id="inpContractWidth" name="width" value="{{ old('width') }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Warp Yarn Rate (Rs./lb) *<input type="number" step="0.0001" min="0" required id="inpContractWarpRate" name="yarn_warp_rate" value="{{ old('yarn_warp_rate') }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Weft Yarn Rate (Rs./lb) *<input type="number" step="0.0001" min="0" required id="inpContractWeftRate" name="yarn_weft_rate" value="{{ old('yarn_weft_rate') }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">Conversion / Pick (Rs.) *<input type="number" step="0.0001" min="0" required id="inpContractConversion" name="conversion_rate" value="{{ old('conversion_rate') }}" oninput="calculateContractPreview()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">KP %<input type="number" step="0.001" min="0" max="100" name="kp_percentage" value="{{ old('kp_percentage', 0) }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">KP Days<input type="number" step="1" min="0" max="3650" name="kp_days" value="{{ old('kp_days', 0) }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">PP %<input type="number" step="0.001" min="0" max="100" name="pp_percentage" value="{{ old('pp_percentage', 0) }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
+                    <label class="text-xs font-semibold text-zinc-600">PP Days<input type="number" step="1" min="0" max="3650" name="pp_days" value="{{ old('pp_days', 0) }}" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"></label>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Rate Per Meter (Rs.) *</label>
-                    <input type="number" step="0.01" name="rate_per_meter" required min="1" placeholder="290"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+            </section>
+
+            <section class="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                    <div><h4 class="text-sm font-extrabold text-zinc-900">Live Contract Calculation</h4><p class="mt-1 text-[10px] text-zinc-500">Warp + weft yarn cost + (pick × conversion rate); sales tax is an estimate shown separately.</p></div>
+                    <span class="rounded-lg bg-white px-2.5 py-1 text-[10px] font-bold text-zinc-500">100 lb per bag · tax 17%</span>
                 </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-zinc-600 mb-1">Expiry / Completion Deadline</label>
-                <input type="date" name="end_date" value="{{ date('Y-m-d', strtotime('+30 days')) }}"
-                       class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-zinc-600 mb-1">Delivery Terms / Notes</label>
-                <input type="text" name="notes" placeholder="e.g. Bi-weekly delivery of 2,500m per lot"
-                       class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-            </div>
-            <div class="pt-3 border-t border-zinc-100 flex justify-end gap-3">
-                <button type="button" onclick="closeModal('modalNewContract')"
-                        class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-600 text-xs font-semibold">Cancel</button>
-                <button type="submit"
-                        class="px-5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 text-xs font-bold shadow-sm">
-                    Register Contract
-                </button>
+                <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">Warp / m</span><strong id="displayContractWarpWeight" class="font-mono text-xs text-zinc-900">0.0000 lb</strong></div>
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">Weft / m</span><strong id="displayContractWeftWeight" class="font-mono text-xs text-zinc-900">0.0000 lb</strong></div>
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">Warp bags</span><strong id="displayContractWarpBags" class="font-mono text-xs text-zinc-900">0.00</strong></div>
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">Weft bags</span><strong id="displayContractWeftBags" class="font-mono text-xs text-zinc-900">0.00</strong></div>
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">GSM</span><strong id="displayContractGsm" class="font-mono text-xs text-zinc-900">0</strong></div>
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">Width</span><strong id="displayContractWidthMeters" class="font-mono text-xs text-zinc-900">0.0000m</strong></div>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">Warp cost / m</span><strong id="displayContractWarpCost" class="font-mono text-sm text-zinc-900">Rs. 0.00</strong></div>
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">Weft cost / m</span><strong id="displayContractWeftCost" class="font-mono text-sm text-zinc-900">Rs. 0.00</strong></div>
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">Conversion / m</span><strong id="displayContractConversionCost" class="font-mono text-sm text-zinc-900">Rs. 0.00</strong></div>
+                    <div class="rounded-xl bg-white p-3"><span class="block text-[10px] text-zinc-400">Commission total (separate)</span><strong id="displayContractCommissionTotal" class="font-mono text-sm text-zinc-900">Rs. 0.00</strong></div>
+                </div>
+                <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div class="rounded-xl bg-zinc-900 p-3 text-white"><span class="block text-[10px] text-zinc-300">Contract Rate / Meter</span><strong id="displayContractRate" class="font-mono text-lg">Rs. 0.00</strong></div>
+                    <div class="rounded-xl bg-zinc-900 p-3 text-white"><span class="block text-[10px] text-zinc-300">Contract Amount (before tax)</span><strong id="displayContractAmount" class="font-mono text-lg">Rs. 0.00</strong></div>
+                    <div class="rounded-xl bg-zinc-100 p-3 text-zinc-900"><span class="block text-[10px] text-zinc-500">Estimated Sales Tax (17%)</span><strong id="displayContractTax" class="font-mono text-lg">Rs. 0.00</strong></div>
+                </div>
+            </section>
+
+            <section>
+                <h4 class="mb-3 text-xs font-extrabold uppercase tracking-wider text-zinc-500">Instructions and notes</h4>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label class="text-xs font-semibold text-zinc-600">Delivery Instructions<textarea name="delivery_instructions" rows="2" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900">{{ old('delivery_instructions') }}</textarea></label>
+                    <label class="text-xs font-semibold text-zinc-600">Payment Instructions<textarea name="payment_instructions" rows="2" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900">{{ old('payment_instructions') }}</textarea></label>
+                    <label class="text-xs font-semibold text-zinc-600">Quality Instructions<textarea name="quality_instructions" rows="2" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900">{{ old('quality_instructions') }}</textarea></label>
+                    <label class="text-xs font-semibold text-zinc-600">Other Instructions / Notes<textarea name="other_instructions" rows="2" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900">{{ old('other_instructions') }}</textarea></label>
+                    <label class="text-xs font-semibold text-zinc-600 sm:col-span-2">Internal Contract Notes<textarea name="notes" rows="2" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900">{{ old('notes') }}</textarea></label>
+                </div>
+            </section>
+
+            <div class="sticky bottom-0 flex justify-end gap-3 border-t border-zinc-100 bg-white/95 pt-4 backdrop-blur">
+                <button type="button" onclick="closeModal('modalNewContract')" class="rounded-xl bg-zinc-100 px-4 py-2.5 text-xs font-semibold text-zinc-600">Cancel</button>
+                <button type="submit" class="rounded-xl bg-zinc-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-zinc-700">Save Contract</button>
             </div>
         </form>
     </div>
@@ -686,6 +749,47 @@
         document.getElementById('displaySubtotal').innerText  = 'Rs. ' + subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
         document.getElementById('displayNetTotal').innerText  = 'Rs. ' + net.toLocaleString('en-US', {minimumFractionDigits: 0});
     }
+
+    function calculateContractPreview() {
+        const value = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+        const meters = value('inpContractMeters');
+        const read = value('inpContractRead');
+        const pick = value('inpContractPick');
+        const warpCount = value('inpContractWarpCount');
+        const weftCount = value('inpContractWeftCount');
+        const width = value('inpContractWidth');
+        const warpRate = value('inpContractWarpRate');
+        const weftRate = value('inpContractWeftRate');
+        const conversionRate = value('inpContractConversion');
+        const commissionRate = value('inpContractCommission');
+        const warpWeight = warpCount > 0 ? Math.floor((((read * width / warpCount / 20 * 1.0936) / 40) * 10000)) / 10000 : 0;
+        const weftWeight = weftCount > 0 ? Math.floor((((pick * width / weftCount / 20 * 1.0936) / 40) * 10000)) / 10000 : 0;
+        const warpCost = Math.floor(warpWeight * warpRate * 10000) / 10000;
+        const weftCost = Math.floor(weftWeight * weftRate * 10000) / 10000;
+        const conversionCost = pick * conversionRate;
+        const ratePerMeter = warpCost + weftCost + conversionCost;
+        const contractAmount = ratePerMeter * meters;
+        const money = (amount) => 'Rs. ' + amount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+        document.getElementById('displayContractWarpWeight').innerText = warpWeight.toFixed(4) + ' lb';
+        document.getElementById('displayContractWeftWeight').innerText = weftWeight.toFixed(4) + ' lb';
+        document.getElementById('displayContractWarpBags').innerText = (warpWeight * meters / 100).toFixed(2);
+        document.getElementById('displayContractWeftBags').innerText = (weftWeight * meters / 100).toFixed(2);
+        document.getElementById('displayContractGsm').innerText = warpCount > 0 && weftCount > 0 ? Math.round((read / warpCount + pick / weftCount) * 25.25) : '0';
+        document.getElementById('displayContractWidthMeters').innerText = (width * 0.0254).toFixed(4) + 'm';
+        document.getElementById('displayContractWarpCost').innerText = money(warpCost);
+        document.getElementById('displayContractWeftCost').innerText = money(weftCost);
+        document.getElementById('displayContractConversionCost').innerText = money(conversionCost);
+        document.getElementById('displayContractCommissionTotal').innerText = money(commissionRate * meters);
+        document.getElementById('displayContractRate').innerText = money(ratePerMeter);
+        document.getElementById('displayContractAmount').innerText = money(contractAmount);
+        document.getElementById('displayContractTax').innerText = money(contractAmount * 0.17);
+    }
+
+    calculateContractPreview();
+    @if($errors->hasAny(['contract_no', 'party_contract_no', 'contract_type', 'loom_type', 'buyer_code', 'buyer_name', 'buyer_phone', 'buyer_gst', 'fabric_quality', 'quality_code', 'contract_quality', 'contract_quality_width', 'panna', 'total_meters', 'read', 'pick', 'warp_count', 'weft_count', 'width', 'yarn_warp_rate', 'yarn_weft_rate', 'conversion_rate', 'broker_code', 'broker_name', 'broker_commission_per_meter', 'kp_percentage', 'kp_days', 'pp_percentage', 'pp_days', 'start_date', 'end_date', 'delivery_instructions', 'payment_instructions', 'quality_instructions', 'other_instructions', 'notes']))
+        openModal('modalNewContract');
+    @endif
 </script>
 @endpush
 @endsection
