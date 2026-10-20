@@ -242,6 +242,8 @@
                         <th class="px-4 py-3">Sizing Slip Ref</th>
                         <th class="px-4 py-3">Yarn Quality</th>
                         <th class="px-4 py-3 text-right">Initial Length</th>
+                        <th class="px-4 py-3 text-right">Actual Woven</th>
+                        <th class="px-4 py-3 text-right">Production Short / Over</th>
                         <th class="px-4 py-3 text-right">Remaining Length</th>
                         <th class="px-4 py-3 text-center">Assigned Loom</th>
                         <th class="px-4 py-3 text-center">Status</th>
@@ -255,6 +257,14 @@
                             <td class="px-4 py-3 font-mono text-zinc-500">{{ $bm->sizingSlip ? $bm->sizingSlip->slip_no : 'Manual' }}</td>
                             <td class="px-4 py-3 font-semibold text-zinc-700">{{ $bm->yarn_quality }}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-500">{{ number_format($bm->total_length_meters, 0) }}m</td>
+                            @php
+                                $actualWovenMeters = (float) ($bm->productions_sum_net_meters_produced ?? 0);
+                                $productionVarianceMeters = (float) $bm->total_length_meters - $actualWovenMeters;
+                            @endphp
+                            <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">{{ number_format($actualWovenMeters, 2) }}m</td>
+                            <td class="px-4 py-3 text-right font-mono {{ $productionVarianceMeters >= 0 ? 'text-amber-700' : 'text-emerald-700' }}">
+                                {{ number_format(abs($productionVarianceMeters), 2) }}m {{ $productionVarianceMeters >= 0 ? 'short' : 'over' }}
+                            </td>
                             <td class="px-4 py-3 text-right font-mono font-bold {{ $bm->remaining_length_meters < 500 ? 'text-zinc-400' : 'text-zinc-900' }}">
                                 {{ number_format($bm->remaining_length_meters, 0) }}m
                                 @if($bm->remaining_length_meters < 500 && $bm->status !== 'exhausted')
@@ -302,7 +312,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="px-4 py-10 text-center text-zinc-400">No beams generated yet. Create a Sizing Slip to generate beams.</td></tr>
+                        <tr><td colspan="10" class="px-4 py-10 text-center text-zinc-400">No beams generated yet. Create a Sizing Slip to generate beams.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -354,7 +364,8 @@
                         <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-r border-zinc-200">Returned to Factory</th>
                         <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-r border-zinc-200">Held With Sizing</th>
                         <th class="px-4 py-3 text-center">Beams Created</th>
-                        <th class="px-4 py-3 text-right">Set Length</th>
+                        <th class="px-4 py-3 text-right">Expected Production</th>
+                        <th class="px-4 py-3 text-right">Expected per Beam</th>
                         <th class="px-4 py-3 text-right">Ends / Taarein</th>
                         <th class="px-4 py-3 text-right">Sizing Weight</th>
                     </tr>
@@ -374,15 +385,25 @@
                                 <span class="font-bold text-zinc-900">{{ $s->total_beams }}</span>
                                 <span class="text-zinc-400 text-[11px]"> beams</span>
                             </td>
+                            @php
+                                $expectedTotalMeters = (float) $s->total_length_meters;
+                                $expectedMetersPerBeam = $s->total_beams > 0 ? $expectedTotalMeters / $s->total_beams : 0;
+                                $actualSlipProduction = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
+                            @endphp
                             <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">
-                                {{ number_format($s->set_length_value ?? $s->total_length_meters, 2) }} {{ $s->set_length_unit === 'gaz' ? 'gaz' : 'm' }}
-                                <span class="block text-[10px] font-normal text-zinc-400">{{ number_format($s->total_length_meters, 2) }}m converted</span>
+                                {{ number_format($expectedTotalMeters, 2) }}m
+                                <span class="block text-[10px] font-normal text-zinc-400">from {{ number_format($s->set_length_value ?? $s->total_length_meters, 2) }} {{ $s->set_length_unit === 'gaz' ? 'gaz' : 'm' }}</span>
+                                <span class="block text-[10px] font-normal text-zinc-500">{{ number_format($actualSlipProduction, 2) }}m woven so far</span>
+                            </td>
+                            <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">
+                                {{ number_format($expectedMetersPerBeam, 2) }}m
+                                <span class="block text-[10px] font-normal text-zinc-400">per beam</span>
                             </td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->total_ends ? number_format($s->total_ends) : '—' }}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->sizing_weight_pounds !== null ? number_format($s->sizing_weight_pounds * 0.45359237, 2).' kg / '.number_format($s->sizing_weight_pounds, 2).' lb' : '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="12" class="px-4 py-10 text-center text-zinc-400">No sizing slips found. Click "+ New Sizing Slip Entry" to create one.</td></tr>
+                        <tr><td colspan="13" class="px-4 py-10 text-center text-zinc-400">No sizing slips found. Click "+ New Sizing Slip Entry" to create one.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -535,9 +556,9 @@
                 </div>
 
                 {{-- Live beam length result --}}
-                <div class="mt-3 flex items-center justify-between rounded-xl bg-zinc-900 px-4 py-3">
-                    <span class="text-xs text-zinc-400">Calculated beam length:</span>
-                    <strong id="displayPerBeamLength" class="font-mono text-sm text-zinc-50">Enter values above</strong>
+            <div class="mt-3 flex items-center justify-between rounded-xl bg-zinc-900 px-4 py-3">
+                    <span class="text-xs text-zinc-400">Expected production:</span>
+                    <strong id="displayPerBeamLength" class="font-mono text-sm text-zinc-50">Enter set length and beam count</strong>
                 </div>
             </div>
 
@@ -709,7 +730,7 @@
         const unit = document.getElementById('selectSetLengthUnit').value;
         const totalLen = setLength * (unit === 'gaz' ? 0.9144 : 1);
         if (beams > 0 && totalLen > 0) {
-            document.getElementById('displayPerBeamLength').innerText = `${totalLen.toFixed(2)}m total · ${(totalLen/beams).toFixed(2)}m per beam`;
+            document.getElementById('displayPerBeamLength').innerText = `${totalLen.toFixed(2)}m total · ${(totalLen/beams).toFixed(2)}m expected per beam`;
         } else {
             document.getElementById('displayPerBeamLength').innerText = 'Enter set length';
         }

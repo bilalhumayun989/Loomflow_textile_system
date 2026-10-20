@@ -20,8 +20,9 @@ class SizingController extends Controller
 
     public function index(): View
     {
-        $slips = SizingSlip::with('beams')->latest('slip_date')->latest('id')->limit(5)->get();
-        $beams = SizingBeam::with('sizingSlip')->latest('id')->limit(5)->get();
+        $slips = SizingSlip::with(['beams' => fn ($query) => $query->withSum('productions', 'net_meters_produced')])
+            ->latest('slip_date')->latest('id')->limit(5)->get();
+        $beams = SizingBeam::with('sizingSlip')->withSum('productions', 'net_meters_produced')->latest('id')->limit(5)->get();
         $page = 'dashboard';
 
         return $this->renderPage($page, $slips, $beams);
@@ -32,7 +33,7 @@ class SizingController extends Controller
         return $this->renderPage(
             'beams',
             collect(),
-            SizingBeam::with('sizingSlip')->latest('id')->paginate(15)
+            SizingBeam::with('sizingSlip')->withSum('productions', 'net_meters_produced')->latest('id')->paginate(15)
         );
     }
 
@@ -40,7 +41,8 @@ class SizingController extends Controller
     {
         return $this->renderPage(
             'slips',
-            SizingSlip::with('beams')->latest('slip_date')->latest('id')->paginate(10),
+            SizingSlip::with(['beams' => fn ($query) => $query->withSum('productions', 'net_meters_produced')])
+                ->latest('slip_date')->latest('id')->paginate(10),
             collect()
         );
     }

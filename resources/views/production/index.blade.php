@@ -619,10 +619,11 @@
             }
             const beamLength = parseFloat(opt.dataset.total) || 0;
             const produced = parseFloat(opt.dataset.produced) || 0;
+            const productionVariance = beamLength - produced;
             const ends = opt.dataset.ends || 'not recorded';
             const weightLb = parseFloat(opt.dataset.weightPounds) || 0;
             const weightKg = weightLb * 0.45359237;
-            document.getElementById('displayBeamSummary').innerText = `${beamLength.toFixed(2)}m beam · ${produced.toFixed(2)}m produced across shifts · ${ends} ends · ${weightLb ? `${weightKg.toFixed(2)} kg sizing bill (${weightLb.toFixed(2)} lb)` : 'sizing weight not recorded'}`;
+            document.getElementById('displayBeamSummary').innerText = `${beamLength.toFixed(2)}m expected production · ${produced.toFixed(2)}m actually woven · ${Math.abs(productionVariance).toFixed(2)}m ${productionVariance >= 0 ? 'short' : 'over'} · ${ends} ends · ${weightLb ? `${weightKg.toFixed(2)} kg sizing bill (${weightLb.toFixed(2)} lb)` : 'sizing weight not recorded'}`;
         } else {
             document.getElementById('displayBeamSummary').innerText = 'Select a sizing beam to see its set length and gate pass totals.';
         }
