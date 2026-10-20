@@ -607,11 +607,11 @@
 
             <div>
                 <label class="block text-xs font-semibold text-zinc-600 mb-1">Fabric Quality Being Woven *</label>
-                <select id="inpProdQuality" name="fabric_quality" required
+                <select id="inpProdQuality" name="fabric_stock_id" required
                         class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     <option value="">Select fabric quality from Fabric Stock</option>
                     @foreach($fabricQualities as $fabricQuality)
-                        <option value="{{ $fabricQuality->quality_name }}">{{ $fabricQuality->quality_name }}</option>
+                        <option value="{{ $fabricQuality->id }}">{{ $fabricQuality->quality_name }}</option>
                     @endforeach
                 </select>
                 @if($fabricQualities->isEmpty())

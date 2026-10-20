@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SalesContract extends Model
@@ -14,6 +15,7 @@ class SalesContract extends Model
         'contract_no',
         'buyer_name',
         'buyer_phone',
+        'fabric_stock_id',
         'fabric_quality',
         'total_meters',
         'rate_per_meter',
@@ -116,6 +118,11 @@ class SalesContract extends Model
     public function sales(): HasMany
     {
         return $this->hasMany(Sale::class);
+    }
+
+    public function fabricStock(): BelongsTo
+    {
+        return $this->belongsTo(FabricStock::class);
     }
 
     /**

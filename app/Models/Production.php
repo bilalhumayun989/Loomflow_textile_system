@@ -16,6 +16,7 @@ class Production extends Model
         'loom_no',
         'operator_name',
         'sizing_beam_id',
+        'fabric_stock_id',
         'fabric_quality',
         'start_meter',
         'end_meter',
@@ -45,5 +46,10 @@ class Production extends Model
     public function beam(): BelongsTo
     {
         return $this->belongsTo(SizingBeam::class, 'sizing_beam_id');
+    }
+
+    public function fabricStock(): BelongsTo
+    {
+        return $this->belongsTo(FabricStock::class);
     }
 }

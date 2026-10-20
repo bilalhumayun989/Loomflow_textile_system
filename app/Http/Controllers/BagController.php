@@ -11,6 +11,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class BagController extends Controller
@@ -198,10 +199,34 @@ class BagController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $validated['transaction_type'] = 'issue_to_sizing';
-        $validated['source'] = 'Factory Yarn Store';
+        $issued = DB::transaction(function () use ($validated): bool {
+            YarnQuality::where('name', $validated['quality'])->lockForUpdate()->firstOrFail();
 
-        BagTransaction::create($validated);
+            $factoryReceived = BagTransaction::where('quality', $validated['quality'])
+                ->where('transaction_type', 'purchase_factory')
+                ->sum('quantity_bags');
+            $alreadyIssued = BagTransaction::where('quality', $validated['quality'])
+                ->where('transaction_type', 'issue_to_sizing')
+                ->sum('quantity_bags');
+            $returned = BagTransaction::where('quality', $validated['quality'])
+                ->where('transaction_type', 'return_from_sizing')
+                ->sum('quantity_bags');
+            $availableBags = $factoryReceived - $alreadyIssued + $returned;
+
+            if ($validated['quantity_bags'] > $availableBags) {
+                return false;
+            }
+
+            $validated['transaction_type'] = 'issue_to_sizing';
+            $validated['source'] = 'Factory Yarn Store';
+            BagTransaction::create($validated);
+
+            return true;
+        });
+
+        if (! $issued) {
+            return back()->withInput()->with('error', 'The Factory Yarn Store does not have enough bags of this yarn quality to issue.');
+        }
 
         return redirect()->route('bags.index')
             ->with('success', "Issued {$validated['quantity_bags']} bags of {$validated['quality']} from Factory Store to {$validated['party_name']}.");

@@ -14,6 +14,7 @@ class Sale extends Model
         'slip_no',
         'sale_type',
         'sales_contract_id',
+        'fabric_stock_id',
         'buyer_name',
         'buyer_phone',
         'fabric_quality',
@@ -43,5 +44,10 @@ class Sale extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(SalesContract::class, 'sales_contract_id');
+    }
+
+    public function fabricStock(): BelongsTo
+    {
+        return $this->belongsTo(FabricStock::class);
     }
 }

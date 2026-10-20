@@ -10,6 +10,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SizingController extends Controller
@@ -123,33 +124,10 @@ class SizingController extends Controller
             'fabric_width_inches' => 'nullable|numeric|min:0.01',
             'selvedge_ends' => 'nullable|integer|min:0',
             'sizing_weight_kg' => 'nullable|numeric|min:0',
-            'bag_transaction_id' => 'nullable|integer|exists:bag_transactions,id',
+            'bag_transaction_id' => 'required|integer|exists:bag_transactions,id',
             'slip_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
-
-        $sourceTransaction = null;
-        if (! empty($validated['bag_transaction_id'])) {
-            $sourceTransaction = BagTransaction::whereKey($validated['bag_transaction_id'])
-                ->whereIn('transaction_type', ['purchase_sizing', 'issue_to_sizing'])
-                ->whereDoesntHave('sizingSlip')
-                ->first();
-
-            if (! $sourceTransaction) {
-                return back()->withInput()->withErrors([
-                    'bag_transaction_id' => 'This sizing bag entry has already been used or is no longer available.',
-                ]);
-            }
-
-            $validated['bags_allocated'] = $sourceTransaction->quantity_bags;
-            $validated['yarn_quality'] = $sourceTransaction->quality;
-            $validated['sizing_party'] = $sourceTransaction->destination ?: ($sourceTransaction->party_name ?: $sourceTransaction->source);
-        }
-
-        $accountedBags = $validated['bags_used'] + $validated['bags_returned_to_factory'] + $validated['bags_held_with_sizing'];
-        if ($accountedBags != $validated['bags_allocated']) {
-            return back()->withInput()->with('error', "Error: Bags Used ({$validated['bags_used']}) + Returned ({$validated['bags_returned_to_factory']}) + Held ({$validated['bags_held_with_sizing']}) = {$accountedBags}, which does not match Allocated Bags ({$validated['bags_allocated']}).");
-        }
 
         if (empty($validated['total_ends']) && (empty($validated['reed_count']) || empty($validated['fabric_width_inches']))) {
             return back()->withInput()->withErrors([
@@ -157,61 +135,81 @@ class SizingController extends Controller
             ]);
         }
 
-        if (empty($validated['total_ends'])) {
-            $validated['total_ends'] = (int) round($validated['reed_count'] * $validated['fabric_width_inches'])
-                + (int) ($validated['selvedge_ends'] ?? 0);
+        $slipResult = DB::transaction(function () use ($validated): SizingSlip|false {
+            $sourceTransaction = BagTransaction::whereKey($validated['bag_transaction_id'])
+                ->whereIn('transaction_type', ['purchase_sizing', 'issue_to_sizing'])
+                ->whereDoesntHave('sizingSlip')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $sourceTransaction) {
+                return false;
+            }
+
+            $validated['bags_allocated'] = $sourceTransaction->quantity_bags;
+            $validated['yarn_quality'] = $sourceTransaction->quality;
+            $validated['sizing_party'] = $sourceTransaction->destination ?: ($sourceTransaction->party_name ?: $sourceTransaction->source);
+
+            $accountedBags = $validated['bags_used'] + $validated['bags_returned_to_factory'] + $validated['bags_held_with_sizing'];
+            if ($accountedBags != $validated['bags_allocated']) {
+                return false;
+            }
+
+            if (empty($validated['total_ends'])) {
+                $validated['total_ends'] = (int) round($validated['reed_count'] * $validated['fabric_width_inches'])
+                    + (int) ($validated['selvedge_ends'] ?? 0);
+            }
+
+            $validated['selvedge_ends'] = (int) ($validated['selvedge_ends'] ?? 0);
+            $validated['total_length_meters'] = round(
+                $validated['set_length_value'] * ($validated['set_length_unit'] === 'gaz' ? 0.9144 : 1),
+                2
+            );
+            $validated['sizing_weight_pounds'] = isset($validated['sizing_weight_kg'])
+                ? round($validated['sizing_weight_kg'] / self::KILOGRAMS_PER_POUND, 2)
+                : null;
+            unset($validated['sizing_weight_kg']);
+
+            $slip = SizingSlip::create($validated);
+            $beamCount = (int) $validated['total_beams'];
+            $meterPerBeam = round($validated['total_length_meters'] / $beamCount, 2);
+            $lastBeamId = SizingBeam::max('id') ?? 100;
+            for ($i = 1; $i <= $beamCount; $i++) {
+                SizingBeam::create([
+                    'sizing_slip_id' => $slip->id,
+                    'beam_no' => 'BM-'.($lastBeamId + $i),
+                    'yarn_quality' => $slip->yarn_quality,
+                    'total_length_meters' => $meterPerBeam,
+                    'remaining_length_meters' => $meterPerBeam,
+                    'status' => 'ready_in_store',
+                    'notes' => "Beam {$i} of {$beamCount} from Sizing Slip {$slip->slip_no}",
+                ]);
+            }
+
+            if ($slip->bags_returned_to_factory > 0) {
+                BagTransaction::create([
+                    'transaction_type' => 'return_from_sizing',
+                    'reference_no' => $slip->slip_no,
+                    'quality' => $slip->yarn_quality,
+                    'quantity_bags' => $slip->bags_returned_to_factory,
+                    'source' => $slip->sizing_party,
+                    'destination' => 'Factory Yarn Store',
+                    'party_name' => $slip->sizing_party,
+                    'transaction_date' => $slip->slip_date,
+                    'notes' => "Automatic return of unused bags from Sizing Slip {$slip->slip_no}",
+                ]);
+            }
+
+            return $slip;
+        });
+
+        if (! $slipResult) {
+            return back()->withInput()->with('error', 'This bag transaction is already linked, or its bag allocation does not balance.');
         }
 
-        $validated['selvedge_ends'] = (int) ($validated['selvedge_ends'] ?? 0);
-
-        $validated['total_length_meters'] = round(
-            $validated['set_length_value'] * ($validated['set_length_unit'] === 'gaz' ? 0.9144 : 1),
-            2
-        );
-
-        $validated['sizing_weight_pounds'] = isset($validated['sizing_weight_kg'])
-            ? round($validated['sizing_weight_kg'] / self::KILOGRAMS_PER_POUND, 2)
-            : null;
-        unset($validated['sizing_weight_kg']);
-
-        if ($sourceTransaction) {
-            $validated['bag_transaction_id'] = $sourceTransaction->id;
-        }
-
-        $slip = SizingSlip::create($validated);
-
-        // Auto create beams for this sizing slip
-        $beamCount = (int) $validated['total_beams'];
-        $meterPerBeam = round($validated['total_length_meters'] / $beamCount, 2);
-
-        $lastBeamId = SizingBeam::max('id') ?? 100;
-        for ($i = 1; $i <= $beamCount; $i++) {
-            $beamNumber = 'BM-'.($lastBeamId + $i);
-            SizingBeam::create([
-                'sizing_slip_id' => $slip->id,
-                'beam_no' => $beamNumber,
-                'yarn_quality' => $slip->yarn_quality,
-                'total_length_meters' => $meterPerBeam,
-                'remaining_length_meters' => $meterPerBeam,
-                'status' => 'ready_in_store',
-                'notes' => "Beam {$i} of {$beamCount} from Sizing Slip {$slip->slip_no}",
-            ]);
-        }
-
-        // If bags returned back to factory, record automatic bag transaction
-        if ($slip->bags_returned_to_factory > 0) {
-            BagTransaction::create([
-                'transaction_type' => 'return_from_sizing',
-                'reference_no' => $slip->slip_no,
-                'quality' => $slip->yarn_quality,
-                'quantity_bags' => $slip->bags_returned_to_factory,
-                'source' => $slip->sizing_party,
-                'destination' => 'Factory Yarn Store',
-                'party_name' => $slip->sizing_party,
-                'transaction_date' => $slip->slip_date,
-                'notes' => "Automatic return of unused bags from Sizing Slip {$slip->slip_no}",
-            ]);
-        }
+        $slip = $slipResult;
+        $beamCount = (int) $slip->total_beams;
+        $meterPerBeam = round($slip->total_length_meters / $beamCount, 2);
 
         return redirect()->route('sizing.index')
             ->with('success', "Sizing Slip {$slip->slip_no} saved! Generated {$beamCount} Beams ({$meterPerBeam}m each) ready in store.");

@@ -518,7 +518,23 @@
 
         <form action="{{ route('sizing.slip.store') }}" method="POST" class="px-6 py-5 space-y-5">
             @csrf
-            <input type="hidden" id="inpBagTransactionId" name="bag_transaction_id">
+            <div>
+                <label class="mb-1 block text-xs font-semibold text-zinc-600">Bag receipt / issue being sized *</label>
+                <select id="inpBagTransactionId" name="bag_transaction_id" required onchange="populateBagTransaction(this)"
+                        class="w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    <option value="">Select a pending bag transaction</option>
+                    @foreach($pendingSizingTransactions as $transaction)
+                        @php
+                            $sizingParty = $transaction->destination ?: ($transaction->party_name ?: $transaction->source);
+                            $sizingSlipNo = 'SZ-' . $transaction->id . '-' . date('ymd', strtotime($transaction->transaction_date));
+                        @endphp
+                        <option value="{{ $transaction->id }}" data-slip="{{ $sizingSlipNo }}" data-party="{{ $sizingParty }}" data-quality="{{ $transaction->quality }}" data-quantity="{{ $transaction->quantity_bags }}" data-date="{{ $transaction->transaction_date->format('Y-m-d') }}">
+                            {{ $transaction->reference_no }} · {{ $transaction->quality }} · {{ $transaction->quantity_bags }} bags · {{ $sizingParty }}
+                        </option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-[10px] text-zinc-400">Each bag receipt can be used for one sizing slip. If none appear, record the yarn purchase or issue to sizing first.</p>
+            </div>
 
             {{-- ── Section 1: Slip Basics ── --}}
             <div>
@@ -734,12 +750,10 @@
 @push('scripts')
 <script>
     function openSizingSlipFromBag(button) {
+        const bagTransaction = document.getElementById('inpBagTransactionId');
+        bagTransaction.value = button.dataset.id || '';
+        populateBagTransaction(bagTransaction);
         const quantity = parseInt(button.dataset.quantity) || 0;
-        document.getElementById('inpBagTransactionId').value = button.dataset.id || '';
-        document.getElementById('inpSlipNo').value = button.dataset.slip || '';
-        document.getElementById('inpSlipDate').value = button.dataset.date || '';
-        document.getElementById('inpSizingParty').value = button.dataset.party || '';
-        document.getElementById('inpYarnQuality').value = button.dataset.quality || '';
         document.getElementById('inpBagsAllocated').value = quantity;
         document.getElementById('inpBagsUsed').value = quantity;
         document.getElementById('inpBagsReturned').value = 0;
@@ -748,6 +762,24 @@
         updateSizingWeightPreview();
         calculateSizingBags();
         openModal('modalNewSizingSlip');
+    }
+
+    function populateBagTransaction(select) {
+        const option = select.options[select.selectedIndex];
+        if (!option || !option.value) return;
+
+        document.getElementById('inpSlipNo').value = option.dataset.slip || '';
+        document.getElementById('inpSlipDate').value = option.dataset.date || '';
+        document.getElementById('inpSizingParty').value = option.dataset.party || '';
+        document.getElementById('inpYarnQuality').value = option.dataset.quality || '';
+        const quantity = parseInt(option.dataset.quantity) || 0;
+        document.getElementById('inpBagsAllocated').value = quantity;
+        document.getElementById('inpBagsUsed').value = quantity;
+        document.getElementById('inpBagsReturned').value = 0;
+        document.getElementById('inpBagsHeld').value = 0;
+        document.getElementById('inpSizingWeightKg').value = (quantity * 100 * 0.45359237).toFixed(2);
+        updateSizingWeightPreview();
+        calculateSizingBags();
     }
 
     function updateSizingWeightPreview() {

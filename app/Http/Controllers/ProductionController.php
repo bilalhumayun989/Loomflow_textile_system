@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\FabricStock;
 use App\Models\Production;
+use App\Models\SalesContract;
 use App\Models\SizingBeam;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProductionController extends Controller
@@ -54,7 +56,7 @@ class ProductionController extends Controller
         // Active Beams mounted or ready
         $activeBeams = SizingBeam::withSum('productions', 'net_meters_produced')
             ->with('sizingSlip')
-            ->where('status', '!=', 'exhausted')
+            ->where('status', 'mounted_on_loom')
             ->get();
         $beamLeakageRows = SizingBeam::with('sizingSlip')
             ->withSum('productions', 'net_meters_produced')
@@ -101,7 +103,7 @@ class ProductionController extends Controller
             'loom_no' => 'required|string|max:50',
             'operator_name' => 'required|string|max:150',
             'sizing_beam_id' => 'required|exists:sizing_beams,id',
-            'fabric_quality' => 'required|string|max:150',
+            'fabric_stock_id' => 'required|exists:fabric_stocks,id',
             'start_meter' => 'required|numeric|min:0',
             'end_meter' => 'required|numeric|gt:start_meter',
             'beam_meters_consumed' => 'required|numeric|min:1',
@@ -113,60 +115,64 @@ class ProductionController extends Controller
         $netMetersProduced = $validated['end_meter'] - $validated['start_meter'];
         $beamConsumed = (float) $validated['beam_meters_consumed'];
 
-        $beam = SizingBeam::whereKey($validated['sizing_beam_id'])->lockForUpdate()->firstOrFail();
-        if ($beamConsumed > (float) $beam->remaining_length_meters) {
-            return back()->withInput()->withErrors([
-                'beam_meters_consumed' => 'Beam consumption cannot exceed the selected beam\'s remaining length.',
-            ]);
+        $production = DB::transaction(function () use ($validated, $beamConsumed, $netMetersProduced) {
+            $beam = SizingBeam::whereKey($validated['sizing_beam_id'])->lockForUpdate()->firstOrFail();
+            $fabric = FabricStock::whereKey($validated['fabric_stock_id'])->lockForUpdate()->firstOrFail();
+
+            if ($beam->status !== 'mounted_on_loom' || $beam->assigned_loom_no !== $validated['loom_no']) {
+                return null;
+            }
+
+            if ($beamConsumed > (float) $beam->remaining_length_meters) {
+                return null;
+            }
+
+            $leakageMeters = max(0, $beamConsumed - $netMetersProduced);
+            $leakagePercentage = $beamConsumed > 0 ? round(($leakageMeters / $beamConsumed) * 100, 2) : 0;
+            $theoreticalMeters = ($validated['rpm'] * 60 * 12) / ($validated['picks_per_inch'] * 39.37);
+            $efficiency = $theoreticalMeters > 0 ? min(99.9, round(($netMetersProduced / $theoreticalMeters) * 100, 2)) : 85.0;
+
+            $validated['fabric_quality'] = $fabric->quality_name;
+            $validated['net_meters_produced'] = $netMetersProduced;
+            $validated['leakage_waste_meters'] = $leakageMeters;
+            $validated['leakage_percentage'] = $leakagePercentage;
+            $validated['efficiency_percentage'] = $efficiency;
+
+            $production = Production::create($validated);
+
+            $newRemaining = max(0, $beam->remaining_length_meters - $beamConsumed);
+            $beam->remaining_length_meters = $newRemaining;
+            if ($newRemaining <= 0) {
+                $beam->status = 'exhausted';
+            }
+            $beam->save();
+
+            $fabric->total_meters_produced += $netMetersProduced;
+            $fabric->current_stock_meters += $netMetersProduced;
+            $activeContractMeters = SalesContract::where('fabric_stock_id', $fabric->id)
+                ->where('status', 'active')
+                ->sum('remaining_meters');
+            $fabric->committed_contract_meters = min(
+                (float) $fabric->current_stock_meters,
+                (float) $activeContractMeters
+            );
+            $fabric->available_open_meters = max(
+                0,
+                $fabric->current_stock_meters - $fabric->committed_contract_meters
+            );
+            $fabric->total_rolls_in_stock += max(1, (int) round($netMetersProduced / 100));
+            $fabric->save();
+
+            return $production;
+        });
+
+        if (! $production) {
+            return back()->withInput()->with('error', 'Select a beam mounted on the chosen loom and enter consumption within its remaining meters.');
         }
 
-        // Calculate leakage / wastage
-        $leakageMeters = max(0, $beamConsumed - $netMetersProduced);
-        $leakagePercentage = $beamConsumed > 0 ? round(($leakageMeters / $beamConsumed) * 100, 2) : 0;
-
-        // Calculate efficiency: (Net Meters / Theoretical Max Meters in 12 hours) * 100
-        // Theoretical max meters in 12 hours = (RPM * 60 min * 12 hr) / (PPI * 39.37 inches per meter)
-        $theoreticalMeters = ($validated['rpm'] * 60 * 12) / ($validated['picks_per_inch'] * 39.37);
-        $efficiency = $theoreticalMeters > 0 ? min(99.9, round(($netMetersProduced / $theoreticalMeters) * 100, 2)) : 85.0;
-
-        $validated['net_meters_produced'] = $netMetersProduced;
-        $validated['leakage_waste_meters'] = $leakageMeters;
-        $validated['leakage_percentage'] = $leakagePercentage;
-        $validated['efficiency_percentage'] = $efficiency;
-
-        $production = Production::create($validated);
-
-        // Deduct beam length
-        $newRemaining = max(0, $beam->remaining_length_meters - $beamConsumed);
-        $beam->remaining_length_meters = $newRemaining;
-        if ($newRemaining <= 0) {
-            $beam->status = 'exhausted';
-        } else {
-            $beam->status = 'mounted_on_loom';
-            $beam->assigned_loom_no = $validated['loom_no'];
-        }
-        $beam->save();
-
-        // Add produced fabric to FabricStock
-        $fabric = FabricStock::firstOrCreate(
-            ['quality_name' => $validated['fabric_quality']],
-            [
-                'construction' => "{$validated['picks_per_inch']} PPI on {$validated['loom_no']}",
-                'width_inches' => 63.0,
-                'total_meters_produced' => 0,
-                'total_rolls_in_stock' => 0,
-                'current_stock_meters' => 0,
-                'committed_contract_meters' => 0,
-                'available_open_meters' => 0,
-                'unit_cost_meter' => 210.00,
-            ]
-        );
-
-        $fabric->increment('total_meters_produced', $netMetersProduced);
-        $fabric->increment('current_stock_meters', $netMetersProduced);
-        $fabric->increment('available_open_meters', $netMetersProduced);
-        // Approximately 1 roll per 100 meters
-        $fabric->increment('total_rolls_in_stock', max(1, (int) round($netMetersProduced / 100)));
+        $leakageMeters = (float) $production->leakage_waste_meters;
+        $leakagePercentage = (float) $production->leakage_percentage;
+        $efficiency = (float) $production->efficiency_percentage;
 
         return redirect()->route('production.index')
             ->with('success', "Production recorded for {$production->loom_no}! Produced: {$netMetersProduced}m | Consumed: {$beamConsumed}m | Leakage: {$leakageMeters}m ({$leakagePercentage}%) | Efficiency: {$efficiency}%");
