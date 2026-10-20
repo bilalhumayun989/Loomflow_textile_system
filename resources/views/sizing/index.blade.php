@@ -291,6 +291,12 @@
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-1.5">
+                                    @if($bm->sizingSlip)
+                                        <button type="button" onclick="openModal('modalBeamDetails{{ $bm->id }}')"
+                                                class="px-2.5 py-1 rounded-lg border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 text-[11px] font-bold transition-colors">
+                                            View
+                                        </button>
+                                    @endif
                                     @if($bm->status !== 'exhausted')
                                         <button type="button"
                                                 onclick="openMountModal('{{ $bm->id }}', '{{ $bm->beam_no }}', '{{ $bm->assigned_loom_no }}')"
@@ -317,6 +323,69 @@
                 </tbody>
             </table>
         </div>
+
+        @foreach($beams as $beamRecord)
+            @if($beamRecord->sizingSlip)
+                @php
+                    $slipDetails = $beamRecord->sizingSlip;
+                    $expectedSlipMeters = (float) $slipDetails->total_length_meters;
+                    $expectedPerBeamMeters = $slipDetails->total_beams > 0 ? $expectedSlipMeters / $slipDetails->total_beams : 0;
+                @endphp
+                <div id="modalBeamDetails{{ $beamRecord->id }}" class="fixed inset-0 z-[60] hidden items-center justify-center overflow-y-auto bg-zinc-950/60 p-4 backdrop-blur-sm">
+                    <div class="my-auto w-full max-w-3xl rounded-3xl border border-zinc-200 bg-white p-5 shadow-2xl sm:p-6">
+                        <div class="flex items-start justify-between gap-4 border-b border-zinc-100 pb-4">
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Sizing Slip Details</p>
+                                <h2 class="mt-1 text-xl font-black text-zinc-900">{{ $slipDetails->slip_no }}</h2>
+                                <p class="mt-1 text-xs text-zinc-500">{{ $slipDetails->sizing_party }} · {{ $slipDetails->slip_date?->format('d M, Y') }}</p>
+                            </div>
+                            <button type="button" onclick="closeModal('modalBeamDetails{{ $beamRecord->id }}')" class="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900" aria-label="Close beam details">✕</button>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Beams from slip</span><strong class="mt-1 block font-mono text-lg text-zinc-900">{{ $slipDetails->total_beams }}</strong></div>
+                            <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Yarn quality</span><strong class="mt-1 block text-sm text-zinc-900">{{ $slipDetails->yarn_quality }}</strong></div>
+                            <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Expected total</span><strong class="mt-1 block font-mono text-lg text-zinc-900">{{ number_format($expectedSlipMeters, 2) }}m</strong></div>
+                            <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Expected / beam</span><strong class="mt-1 block font-mono text-lg text-zinc-900">{{ number_format($expectedPerBeamMeters, 2) }}m</strong></div>
+                        </div>
+
+                        <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Set length</span><strong class="mt-1 block text-sm text-zinc-800">{{ number_format($slipDetails->set_length_value ?? $expectedSlipMeters, 2) }} {{ $slipDetails->set_length_unit === 'gaz' ? 'gaz' : 'meters' }}</strong></div>
+                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Bags allocated / used</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ $slipDetails->bags_allocated }} / {{ $slipDetails->bags_used }}</strong></div>
+                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Returned / held</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ $slipDetails->bags_returned_to_factory }} / {{ $slipDetails->bags_held_with_sizing }}</strong></div>
+                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Ends / Taarein</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ $slipDetails->total_ends ? number_format($slipDetails->total_ends) : 'Not recorded' }}</strong></div>
+                        </div>
+
+                        @if($slipDetails->sizing_weight_pounds !== null)
+                            <p class="mt-3 text-xs text-zinc-500">Sizing weight: <strong class="text-zinc-800">{{ number_format($slipDetails->sizing_weight_pounds * 0.45359237, 2) }} kg</strong> ({{ number_format($slipDetails->sizing_weight_pounds, 2) }} lb)</p>
+                        @endif
+
+                        <div class="mt-5 overflow-hidden rounded-2xl border border-zinc-200">
+                            <div class="bg-zinc-50 px-4 py-3 text-xs font-extrabold text-zinc-800">All beams created from this slip</div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="text-[10px] uppercase tracking-wider text-zinc-500"><tr class="border-t border-zinc-200"><th class="px-4 py-2.5">Beam</th><th class="px-4 py-2.5">Status / Loom</th><th class="px-4 py-2.5 text-right">Expected</th><th class="px-4 py-2.5 text-right">Woven</th><th class="px-4 py-2.5 text-right">Remaining</th></tr></thead>
+                                    <tbody class="divide-y divide-zinc-100">
+                                        @foreach($slipDetails->beams as $slipBeam)
+                                            <tr>
+                                                <td class="px-4 py-2.5 font-mono font-bold text-zinc-900">{{ $slipBeam->beam_no }}</td>
+                                                <td class="px-4 py-2.5 text-zinc-600">{{ str_replace('_', ' ', ucfirst($slipBeam->status)) }}{{ $slipBeam->assigned_loom_no ? ' · '.$slipBeam->assigned_loom_no : '' }}</td>
+                                                <td class="px-4 py-2.5 text-right font-mono text-zinc-700">{{ number_format($slipBeam->total_length_meters, 2) }}m</td>
+                                                <td class="px-4 py-2.5 text-right font-mono text-zinc-700">{{ number_format($slipBeam->productions_sum_net_meters_produced ?? 0, 2) }}m</td>
+                                                <td class="px-4 py-2.5 text-right font-mono text-zinc-700">{{ number_format($slipBeam->remaining_length_meters, 2) }}m</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            <button type="button" onclick="closeModal('modalBeamDetails{{ $beamRecord->id }}')" class="rounded-xl bg-zinc-100 px-4 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-200">Close details</button>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @endforeach
 
         @if($page === 'beams')
             <div class="px-6 py-4 border-t border-zinc-100">{{ $beams->links() }}</div>
