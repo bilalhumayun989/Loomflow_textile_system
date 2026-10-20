@@ -57,6 +57,24 @@
                 @endif
             </a>
 
+            {{-- Production Leakage --}}
+            <a href="{{ route('production.leakage') }}"
+               class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all
+                      {{ $page === 'leakage' ? 'bg-zinc-900 text-zinc-50 shadow-sm' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg {{ $page === 'leakage' ? 'bg-zinc-700' : 'bg-zinc-100' }}">
+                    <svg class="h-3.5 w-3.5 {{ $page === 'leakage' ? 'text-zinc-100' : 'text-zinc-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M5.06 19h13.88c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.33 16c-.77 1.33.19 3 1.73 3z"/>
+                    </svg>
+                </span>
+                <div>
+                    <span class="block leading-tight">Production Leakage</span>
+                    <span class="block text-[10px] font-normal text-zinc-400">Expected vs actual by beam</span>
+                </div>
+                @if($page === 'leakage')
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0"></span>
+                @endif
+            </a>
+
             {{-- Production History --}}
             <a href="{{ route('production.history') }}"
                class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all
@@ -147,10 +165,10 @@
                     <span class="text-xs font-bold uppercase tracking-wider text-zinc-500">Module 06</span>
                 </div>
                 <h1 class="text-2xl font-black text-zinc-900 tracking-tight">
-                    {{ ['dashboard' => 'Production Dashboard', 'loom-summary' => 'Loom-wise Production Summary', 'history' => 'Production History Log'][$page] }}
+                    {{ ['dashboard' => 'Production Dashboard', 'loom-summary' => 'Loom-wise Production Summary', 'leakage' => 'Production Leakage', 'history' => 'Production History Log'][$page] }}
                 </h1>
                 <p class="text-xs text-zinc-400 mt-0.5">
-                    {{ ['dashboard' => 'Shift production, beam consumption, leakage waste, and efficiency overview.', 'loom-summary' => 'Per-loom breakdown of fabric output, beam consumed, and leakage loss.', 'history' => 'Complete shift-by-shift production log with meter counters and leakage data.'][$page] }}
+                    {{ ['dashboard' => 'Shift production, beam consumption, leakage waste, and efficiency overview.', 'loom-summary' => 'Per-loom breakdown of fabric output, beam consumed, and leakage loss.', 'leakage' => 'Sizing beam expected meters compared with actual woven meters.', 'history' => 'Complete shift-by-shift production log with meter counters and leakage data.'][$page] }}
                 </p>
             </div>
             <div class="flex items-center gap-3 shrink-0">
@@ -171,6 +189,85 @@
                 </a>
             </div>
         </div>
+
+        @if($page === 'leakage')
+            @php
+                $expectedTotal = (float) $beamLeakageRows->sum('total_length_meters');
+                $actualTotal = (float) $beamLeakageRows->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
+                $gapTotal = max(0, $expectedTotal - $actualTotal);
+                $finalLeakageTotal = (float) $beamLeakageRows->where('status', 'exhausted')->sum(fn ($beam) => max(0, (float) $beam->total_length_meters - (float) ($beam->productions_sum_net_meters_produced ?? 0)));
+            @endphp
+            <section class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Expected Production</div>
+                        <div class="mt-1 font-mono text-2xl font-black text-zinc-900">{{ number_format($expectedTotal, 2) }}m</div>
+                        <p class="mt-1 text-xs text-zinc-400">Sum of sizing beam lengths</p>
+                    </div>
+                    <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Actual Production</div>
+                        <div class="mt-1 font-mono text-2xl font-black text-zinc-900">{{ number_format($actualTotal, 2) }}m</div>
+                        <p class="mt-1 text-xs text-zinc-400">Sum of recorded woven meters</p>
+                    </div>
+                    <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Expected − Actual Gap</div>
+                        <div class="mt-1 font-mono text-2xl font-black text-zinc-900">{{ number_format($gapTotal, 2) }}m</div>
+                        <p class="mt-1 text-xs text-zinc-400">Current gap across all beams</p>
+                    </div>
+                    <div class="rounded-2xl border border-zinc-300 bg-zinc-100 p-4 shadow-sm">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-700">Final Leakage on Exhausted Beams</div>
+                        <div class="mt-1 font-mono text-2xl font-black text-zinc-900">{{ number_format($finalLeakageTotal, 2) }}m</div>
+                        <p class="mt-1 text-xs text-zinc-600">Expected minus actual for finished beams</p>
+                    </div>
+                </div>
+
+                <div class="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+                    <div class="border-b border-zinc-100 bg-zinc-50 px-6 py-4">
+                        <h2 class="text-sm font-extrabold text-zinc-900">Expected vs Actual Production by Beam</h2>
+                        <p class="mt-1 text-[11px] text-zinc-500">Gap = expected beam meters − actual woven meters. For beams still running, the gap is provisional; it becomes final leakage when the beam is exhausted.</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-white text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                                <tr class="border-b border-zinc-200">
+                                    <th class="px-4 py-3">Beam / Sizing Slip</th>
+                                    <th class="px-4 py-3">Loom</th>
+                                    <th class="px-4 py-3 text-right">Expected</th>
+                                    <th class="px-4 py-3 text-right">Actual Woven</th>
+                                    <th class="px-4 py-3 text-right">Gap / Leakage</th>
+                                    <th class="px-4 py-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-100">
+                                @forelse($beamLeakageRows as $beam)
+                                    @php
+                                        $expectedMeters = (float) $beam->total_length_meters;
+                                        $actualMeters = (float) ($beam->productions_sum_net_meters_produced ?? 0);
+                                        $productionGap = max(0, $expectedMeters - $actualMeters);
+                                        $isFinished = $beam->status === 'exhausted';
+                                    @endphp
+                                    <tr class="hover:bg-zinc-50">
+                                        <td class="px-4 py-3">
+                                            <span class="font-mono font-bold text-zinc-900">{{ $beam->beam_no }}</span>
+                                            <span class="block text-[10px] text-zinc-400">{{ $beam->sizingSlip?->slip_no ?? 'No sizing slip reference' }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-zinc-600">{{ $beam->assigned_loom_no ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">{{ number_format($expectedMeters, 2) }}m</td>
+                                        <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-900">{{ number_format($actualMeters, 2) }}m</td>
+                                        <td class="px-4 py-3 text-right font-mono font-bold {{ $isFinished ? 'text-amber-700' : 'text-zinc-600' }}">{{ number_format($productionGap, 2) }}m</td>
+                                        <td class="px-4 py-3 text-center">
+                                            <span class="rounded-full px-2.5 py-1 text-[10px] font-bold {{ $isFinished ? 'bg-amber-50 text-amber-800' : 'bg-zinc-100 text-zinc-600' }}">{{ $isFinished ? 'Final leakage' : 'In progress · provisional gap' }}</span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="px-4 py-12 text-center text-zinc-400">No sizing beams exist yet. Create a sizing slip to track expected production.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        @endif
 
         {{-- KPI Cards (dashboard only) --}}
         @if($page === 'dashboard')
@@ -362,7 +459,7 @@
                             <th class="px-4 py-3 text-right bg-zinc-900/5 border-x border-zinc-200 font-black text-zinc-800">Net Produced</th>
                             <th class="px-4 py-3 text-right">Est. / Short</th>
                             <th class="px-4 py-3 text-right">Beam Taken</th>
-                            <th class="px-4 py-3 text-right bg-zinc-100/70 border-x border-zinc-200 text-zinc-600">Leakage</th>
+                            <th class="px-4 py-3 text-right bg-zinc-100/70 border-x border-zinc-200 text-zinc-600">Shift Leakage<br><span class="font-normal normal-case">Consumed − woven</span></th>
                             <th class="px-4 py-3 text-center">Efficiency</th>
                         </tr>
                     </thead>

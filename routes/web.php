@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
     // 6. Production (Loom-wise daily production, beam length consumption, leakage/loss calculation)
     Route::get('/production', [ProductionController::class, 'index'])->name('production.index');
     Route::get('/production/loom-summary', [ProductionController::class, 'loomSummary'])->name('production.loom-summary');
+    Route::get('/production/leakage', [ProductionController::class, 'leakage'])->name('production.leakage');
     Route::get('/production/history', [ProductionController::class, 'history'])->name('production.history');
     Route::post('/production', [ProductionController::class, 'storeProduction'])->name('production.store');
 

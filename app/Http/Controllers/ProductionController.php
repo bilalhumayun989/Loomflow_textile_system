@@ -25,6 +25,11 @@ class ProductionController extends Controller
         return $this->renderPage('loom-summary', collect());
     }
 
+    public function leakage(): View
+    {
+        return $this->renderPage('leakage', collect());
+    }
+
     public function history(Request $request): View
     {
         $query = Production::with('beam')->latest('production_date')->latest('id');
@@ -51,6 +56,11 @@ class ProductionController extends Controller
             ->with('sizingSlip')
             ->where('status', '!=', 'exhausted')
             ->get();
+        $beamLeakageRows = SizingBeam::with('sizingSlip')
+            ->withSum('productions', 'net_meters_produced')
+            ->withSum('productions', 'beam_meters_consumed')
+            ->orderByDesc('id')
+            ->get();
         $fabricQualities = FabricStock::orderBy('quality_name')->get();
         $looms = collect(range(1, 24))->map(fn ($i) => sprintf('Loom-%02d', $i));
 
@@ -71,6 +81,7 @@ class ProductionController extends Controller
             'page',
             'productions',
             'activeBeams',
+            'beamLeakageRows',
             'fabricQualities',
             'looms',
             'totalFabricProduced',
