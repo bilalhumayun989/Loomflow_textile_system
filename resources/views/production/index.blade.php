@@ -510,9 +510,16 @@
 
             <div>
                 <label class="block text-xs font-semibold text-zinc-600 mb-1">Fabric Quality Being Woven *</label>
-                <input type="text" id="inpProdQuality" name="fabric_quality" required
-                       placeholder="e.g. Cotton Sheeting 68x68 / 30x30"
-                       class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                <select id="inpProdQuality" name="fabric_quality" required
+                        class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    <option value="">Select fabric quality from Fabric Stock</option>
+                    @foreach($fabricQualities as $fabricQuality)
+                        <option value="{{ $fabricQuality->quality_name }}">{{ $fabricQuality->quality_name }}</option>
+                    @endforeach
+                </select>
+                @if($fabricQualities->isEmpty())
+                    <a href="{{ route('fabric.index') }}" class="mt-1 inline-block text-[10px] font-semibold text-zinc-500 underline">Add a fabric quality in Fabric Stock first</a>
+                @endif
             </div>
 
             {{-- Meter counters panel --}}
@@ -607,7 +614,6 @@
         const select = document.getElementById('selectProdBeam');
         const opt = select.options[select.selectedIndex];
         if (opt && opt.value) {
-            document.getElementById('inpProdQuality').value = opt.dataset.quality || '';
             if (opt.dataset.loom && opt.dataset.loom !== 'Ready') {
                 document.getElementById('selectProdLoom').value = opt.dataset.loom;
             }

@@ -125,6 +125,11 @@
                 </svg>
                 Receive Return
             </button>
+            <button type="button" onclick="openModal('modalYarnQualities')"
+                    class="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[11px] font-bold text-zinc-700 hover:bg-zinc-100 transition-colors">
+                <svg class="h-3.5 w-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Manage Yarn Qualities
+            </button>
         </div>
     </aside>
 
@@ -478,7 +483,13 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-zinc-600 mb-1">Yarn Quality / Count *</label>
-                    <input type="text" name="quality" required placeholder="e.g. 30/1 PC, 40/1 Combed" value="{{ old('quality') }}" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    <div class="flex gap-2">
+                        <select name="quality" required data-yarn-quality-select class="min-w-0 flex-1 bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                            <option value="">Select yarn quality</option>
+                            @foreach($yarnQualities as $yarnQuality)<option value="{{ $yarnQuality->name }}">{{ $yarnQuality->name }}</option>@endforeach
+                        </select>
+                        <button type="button" onclick="openModal('modalYarnQualities')" class="shrink-0 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100">+ Create</button>
+                    </div>
                 </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -562,7 +573,13 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold text-zinc-600 mb-1">Yarn Quality *</label>
-                <input type="text" name="quality" required placeholder="e.g. 30/1 PC Combed" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                <div class="flex gap-2">
+                    <select name="quality" required data-yarn-quality-select class="min-w-0 flex-1 bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <option value="">Select yarn quality</option>
+                        @foreach($yarnQualities as $yarnQuality)<option value="{{ $yarnQuality->name }}">{{ $yarnQuality->name }}</option>@endforeach
+                    </select>
+                    <button type="button" onclick="openModal('modalYarnQualities')" class="shrink-0 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100">+ Create</button>
+                </div>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-zinc-600 mb-1">Destination / Sizing Mill *</label>
@@ -614,7 +631,13 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold text-zinc-600 mb-1">Yarn Quality *</label>
-                <input type="text" name="quality" required placeholder="e.g. 30/1 PC Combed" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                <div class="flex gap-2">
+                    <select name="quality" required data-yarn-quality-select class="min-w-0 flex-1 bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <option value="">Select yarn quality</option>
+                        @foreach($yarnQualities as $yarnQuality)<option value="{{ $yarnQuality->name }}">{{ $yarnQuality->name }}</option>@endforeach
+                    </select>
+                    <button type="button" onclick="openModal('modalYarnQualities')" class="shrink-0 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100">+ Create</button>
+                </div>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-zinc-600 mb-1">Returning Sizing Mill / Party *</label>
@@ -693,4 +716,5 @@
     }
 </script>
 @endpush
+@include('yarn-qualities.modal')
 @endsection

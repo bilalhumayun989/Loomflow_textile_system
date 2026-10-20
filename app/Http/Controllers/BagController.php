@@ -6,6 +6,7 @@ use App\Models\BagPurchase;
 use App\Models\BagTransaction;
 use App\Models\Ledger;
 use App\Models\SizingSlip;
+use App\Models\YarnQuality;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -88,6 +89,7 @@ class BagController extends Controller
 
         // Total Yarn Investment
         $totalYarnInvestment = BagPurchase::sum('total_amount');
+        $yarnQualities = YarnQuality::orderBy('name')->get();
 
         return view('bags.index', compact(
             'page',
@@ -102,7 +104,8 @@ class BagController extends Controller
             'totalBagsUsedInBeams',
             'unusedBagsReturned',
             'unusedBagsHeldWithSizing',
-            'totalYarnInvestment'
+            'totalYarnInvestment',
+            'yarnQualities'
         ));
     }
 
@@ -111,7 +114,7 @@ class BagController extends Controller
         $validated = $request->validate([
             'challan_no' => 'required|string|max:100',
             'supplier_name' => 'required|string|max:150',
-            'quality' => 'required|string|max:100',
+            'quality' => 'required|string|exists:yarn_qualities,name',
             'total_bags' => 'required|integer|min:1',
             'bags_to_sizing' => 'required|integer|min:0',
             'bags_to_factory' => 'required|integer|min:0',
@@ -187,7 +190,7 @@ class BagController extends Controller
     {
         $validated = $request->validate([
             'reference_no' => 'required|string|max:100',
-            'quality' => 'required|string|max:100',
+            'quality' => 'required|string|exists:yarn_qualities,name',
             'quantity_bags' => 'required|integer|min:1',
             'destination' => 'required|string|max:150',
             'party_name' => 'required|string|max:150',
@@ -208,7 +211,7 @@ class BagController extends Controller
     {
         $validated = $request->validate([
             'reference_no' => 'required|string|max:100',
-            'quality' => 'required|string|max:100',
+            'quality' => 'required|string|exists:yarn_qualities,name',
             'quantity_bags' => 'required|integer|min:1',
             'source' => 'required|string|max:150',
             'party_name' => 'required|string|max:150',

@@ -51,6 +51,7 @@ class ProductionController extends Controller
             ->with('sizingSlip')
             ->where('status', '!=', 'exhausted')
             ->get();
+        $fabricQualities = FabricStock::orderBy('quality_name')->get();
         $looms = collect(range(1, 24))->map(fn ($i) => sprintf('Loom-%02d', $i));
 
         // Aggregate statistics
@@ -70,6 +71,7 @@ class ProductionController extends Controller
             'page',
             'productions',
             'activeBeams',
+            'fabricQualities',
             'looms',
             'totalFabricProduced',
             'totalBeamConsumed',

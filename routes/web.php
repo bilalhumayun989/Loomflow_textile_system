@@ -9,6 +9,7 @@ use App\Http\Controllers\PartController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\SizingController;
+use App\Http\Controllers\YarnQualityController;
 use Illuminate\Support\Facades\Route;
 
 // Guest Authentication Routes
@@ -24,6 +25,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('home');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/yarn-qualities', [YarnQualityController::class, 'store'])->name('yarn-qualities.store');
 
     // 1. Bags (Yarn management, purchase split, store stock & sizing history)
     Route::get('/bags', [BagController::class, 'index'])->name('bags.index');

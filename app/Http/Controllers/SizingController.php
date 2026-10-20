@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BagTransaction;
 use App\Models\SizingBeam;
 use App\Models\SizingSlip;
+use App\Models\YarnQuality;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -73,6 +74,7 @@ class SizingController extends Controller
             ->latest('id')
             ->get();
         $kilogramsPerBag = self::BAG_WEIGHT_POUNDS * self::KILOGRAMS_PER_POUND;
+        $yarnQualities = YarnQuality::orderBy('name')->get();
 
         // All active looms list (1 to 24)
         $looms = collect(range(1, 24))->map(fn ($i) => sprintf('Loom-%02d', $i));
@@ -94,6 +96,7 @@ class SizingController extends Controller
             'remainingBeamMetersOnLooms',
             'pendingSizingTransactions',
             'kilogramsPerBag',
+            'yarnQualities',
             'looms'
         ));
     }
@@ -103,7 +106,7 @@ class SizingController extends Controller
         $validated = $request->validate([
             'slip_no' => 'required|string|max:100|unique:sizing_slips,slip_no',
             'sizing_party' => 'required|string|max:150',
-            'yarn_quality' => 'required|string|max:100',
+            'yarn_quality' => 'required|string|exists:yarn_qualities,name',
             'bags_allocated' => 'required|integer|min:1',
             'bags_used' => 'required|integer|min:0',
             'bags_returned_to_factory' => 'required|integer|min:0',
