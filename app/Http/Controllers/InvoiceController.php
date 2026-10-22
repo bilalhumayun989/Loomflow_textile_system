@@ -79,8 +79,7 @@ class InvoiceController extends Controller
         }
         $totalInvoiced = (float) Invoice::where('status', 'issued')->sum('total');
         $totalReceived = (float) PaymentReceipt::sum('amount');
-        $totalAllocated = (float) DB::table('invoice_payment_allocations')->sum('amount');
-        $totalDue = max(0, $totalInvoiced - $totalAllocated + (float) Customer::sum('opening_balance'));
+        $totalDue = max(0, $totalInvoiced - $totalReceived + (float) Customer::sum('opening_balance'));
         $totalAccountBalance = (float) FinancialAccount::sum('opening_balance')
             + (float) AccountTransaction::where('direction', 'in')->sum('amount')
             - (float) AccountTransaction::where('direction', 'out')->sum('amount');
@@ -105,6 +104,10 @@ class InvoiceController extends Controller
             'address' => 'nullable|string|max:1000',
             'opening_balance' => 'nullable|numeric|min:0|max:999999999999',
         ]);
+        $validated['name'] = trim($validated['name']);
+        if (Customer::whereRaw('LOWER(name) = ?', [mb_strtolower($validated['name'])])->exists()) {
+            throw ValidationException::withMessages(['name' => 'This customer already exists. Select the existing customer instead of creating a duplicate.']);
+        }
         $validated['phone'] = filled($validated['phone'] ?? null) ? trim($validated['phone']) : null;
         $validated['opening_balance'] = round((float) ($validated['opening_balance'] ?? 0), 2);
         Customer::create($validated);

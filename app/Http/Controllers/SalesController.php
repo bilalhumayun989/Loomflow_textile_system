@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FabricStock;
 use App\Models\Customer;
+use App\Models\FabricStock;
 use App\Models\Ledger;
 use App\Models\Sale;
 use App\Models\SalesContract;
@@ -263,6 +263,11 @@ class SalesController extends Controller
         $customer = Customer::query()->whereRaw('LOWER(name) = ?', [$normalizedName])->first();
 
         if ($customer) {
+            $phone = filled($phone) ? trim($phone) : null;
+            if (! filled($customer->phone) && $phone && ! Customer::where('phone', $phone)->exists()) {
+                $customer->update(['phone' => $phone]);
+            }
+
             return $customer;
         }
 
