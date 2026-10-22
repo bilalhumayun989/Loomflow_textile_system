@@ -470,6 +470,26 @@
                             <p class="mt-1 text-[10px] text-zinc-400">Count is a reconciliation estimate from total ends, unmultiplied set length, and net bill weight. It cannot by itself establish fraud or replace a yarn test.</p>
                         @endif
 
+                        @if(($slipDetails->slip_type ?? 'raw_perch') === 'final_perch')
+                            <div class="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                                <p class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Final Perch invoice reconciliation</p>
+                                <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-zinc-600 sm:grid-cols-3">
+                                    <span>Wet cones ({{ $slipDetails->wet_cone_bags }} bags): <strong>{{ number_format($slipDetails->wet_cone_weight_kg, 2) }} kg</strong></span>
+                                    <span>Empty bags ({{ $slipDetails->empty_bag_count }}): <strong>{{ number_format($slipDetails->empty_bag_weight_kg, 2) }} kg</strong></span>
+                                    <span>Paper bags ({{ $slipDetails->paper_bag_count }}): <strong>{{ number_format($slipDetails->paper_bag_weight_kg, 2) }} kg</strong></span>
+                                    <span>Sound cones ({{ $slipDetails->sound_cone_count }}): <strong>{{ number_format($slipDetails->sound_cone_weight_kg, 2) }} kg</strong></span>
+                                    <span>Cartons ({{ $slipDetails->carton_count }}): <strong>{{ number_format($slipDetails->carton_weight_kg, 2) }} kg</strong></span>
+                                    <span>Total deductions: <strong>{{ number_format($slipDetails->returned_materials_weight_kg, 2) }} kg</strong></span>
+                                </div>
+                                <p class="mt-2 border-t border-zinc-200 pt-2 text-xs font-semibold text-zinc-800">
+                                    Net {{ number_format($slipDetails->sizing_weight_pounds * 0.45359237, 2) }} kg
+                                    @if($slipDetails->sizing_rate_per_kg !== null)
+                                        × Rs. {{ number_format($slipDetails->sizing_rate_per_kg, 2) }}/kg = Rs. {{ number_format($slipDetails->sizing_bill_amount, 2) }}
+                                    @endif
+                                </p>
+                            </div>
+                        @endif
+
                         <div class="mt-5 overflow-hidden rounded-2xl border border-zinc-200">
                             <div class="bg-zinc-50 px-4 py-3 text-xs font-extrabold text-zinc-800">All beams created from this slip</div>
                             <div class="overflow-x-auto">
@@ -556,7 +576,7 @@
                 <tbody class="divide-y divide-zinc-100">
                     @forelse($slips as $s)
                         <tr class="hover:bg-zinc-50 transition-colors">
-                            <td class="px-4 py-3 font-mono font-bold text-zinc-900">{{ $s->slip_no }}</td>
+                            <td class="px-4 py-3 font-mono font-bold text-zinc-900">{{ $s->slip_no }}<span class="mt-1 block text-[9px] font-sans uppercase text-zinc-400">{{ str_replace('_', ' ', $s->slip_type ?? 'raw_perch') }}</span></td>
                             <td class="px-4 py-3 text-zinc-500 font-mono">{{ $s->slip_date->format('d M, Y') }}</td>
                             <td class="px-4 py-3 font-semibold text-zinc-700">{{ $s->sizing_party }}</td>
                             <td class="px-4 py-3 text-zinc-600 font-mono">{{ $s->yarn_quality }}</td>
@@ -602,7 +622,7 @@
                                 <span class="block text-[10px]">{{ $allSlipBeamsFinished ? 'final' : 'provisional' }}</span>
                             </td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->total_ends ? number_format($s->total_ends) : '—' }}</td>
-                            <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->sizing_weight_pounds !== null ? number_format($s->sizing_weight_pounds * 0.45359237, 2).' kg net' : '—' }}{{ $s->sizing_gross_weight_pounds !== null ? ' / '.number_format($s->sizing_gross_weight_pounds * 0.45359237, 2).' kg gross' : '' }}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->sizing_weight_pounds !== null ? number_format($s->sizing_weight_pounds * 0.45359237, 2).' kg net' : '—' }}{{ $s->sizing_gross_weight_pounds !== null ? ' / '.number_format($s->sizing_gross_weight_pounds * 0.45359237, 2).' kg gross' : '' }}@if($s->sizing_bill_amount !== null)<span class="mt-1 block text-[10px] font-bold text-zinc-900">Rs. {{ number_format($s->sizing_bill_amount, 2) }} @ {{ number_format($s->sizing_rate_per_kg, 2) }}/kg</span>@endif</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $estimatedWarpCount !== null ? number_format($estimatedWarpCount, 2).' Ne' : '—' }}</td>
                         </tr>
                     @empty
@@ -652,6 +672,7 @@
 
         <form action="{{ route('sizing.slip.store') }}" method="POST" class="px-6 py-5 space-y-5">
             @csrf
+            <label class="block text-xs font-semibold text-zinc-600">Perch entry type<select id="sizingSlipType" name="slip_type" onchange="toggleFinalPerchFields()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm"><option value="raw_perch">Raw Perch — gate pass and beam details</option><option value="final_perch">Final Perch — sizing invoice and returned-material deductions</option></select></label>
             <div>
                 <label class="mb-1 block text-xs font-semibold text-zinc-600">Bag receipt / issue being sized *</label>
                 <select id="inpBagTransactionId" name="bag_transaction_id" required onchange="populateBagTransaction(this)"
@@ -755,7 +776,7 @@
                 <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Beam & Warp Length</div>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Raw / Back Beams Received</label>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Raw / Back Beams</label>
                         <input type="number" name="back_beam_count" min="1" max="1000"
                                placeholder="e.g. 5"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
@@ -826,7 +847,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Gross Weight on Sizing Bill (kg)</label>
-                        <input type="number" step="0.01" id="inpSizingGrossWeightKg" name="sizing_gross_weight_kg" min="0.01" placeholder="e.g. 2550" oninput="updateSizingWeightPreview()"
+                        <input type="number" step="0.01" id="inpSizingGrossWeightKg" name="sizing_gross_weight_kg" min="0.01" placeholder="e.g. 2550" oninput="updateSizingWeightPreview(); updateFinalPerchPreview()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         <span id="sizingGrossWeightPoundsPreview" class="mt-1 block text-[10px] text-zinc-500">Bill gross weight, if listed.</span>
                     </div>
@@ -841,6 +862,24 @@
                     </div>
                 </div>
             </div>
+
+            <section id="finalPerchFields" class="hidden rounded-2xl border border-zinc-300 bg-zinc-50 p-4 space-y-4">
+                <div><h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Final Perch Invoice — returned materials</h4><p class="mt-1 text-[10px] text-zinc-500">Enter the invoice gross yarn weight and returned quantities. Net yarn and bill total are calculated automatically.</p></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="text-xs font-semibold">Wet cones / bora gala — bags<input name="wet_cone_bags" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Wet cones weight (kg)<input id="wetConeWeightKg" name="wet_cone_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Empty bags count<input name="empty_bag_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Empty bags weight (kg)<input id="emptyBagWeightKg" name="empty_bag_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Paper bags count<input name="paper_bag_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Paper bags weight (kg)<input id="paperBagWeightKg" name="paper_bag_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Sound / half-sound cones count<input name="sound_cone_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Sound cones weight (kg)<input id="soundConeWeightKg" name="sound_cone_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Cartons count<input name="carton_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Cartons weight (kg)<input id="cartonWeightKg" name="carton_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                </div>
+                <div class="grid grid-cols-2 gap-3 border-t border-zinc-200 pt-3"><div class="rounded-xl bg-white p-3"><span class="text-[10px] font-bold uppercase text-zinc-500">Total deductions</span><strong id="finalDeductionsPreview" class="mt-1 block font-mono text-lg">0.00 kg</strong></div><label class="text-xs font-semibold">Sizing rate (Rs. / kg)<input id="sizingRatePerKg" name="sizing_rate_per_kg" type="number" min="0" step="0.01" placeholder="61.00" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label></div>
+                <div class="rounded-xl bg-zinc-900 p-3 text-white"><div class="flex justify-between text-xs"><span>Net yarn weight</span><strong id="finalNetWeightPreview">0.00 kg</strong></div><div class="mt-2 flex justify-between border-t border-white/20 pt-2 text-sm"><span>Sizing bill</span><strong id="finalBillPreview">Rs. 0.00</strong></div></div>
+            </section>
 
             {{-- Notes --}}
             <div>
@@ -915,6 +954,8 @@
         const bagTransaction = document.getElementById('inpBagTransactionId');
         bagTransaction.value = button.dataset.id || '';
         populateBagTransaction(bagTransaction);
+        document.getElementById('sizingSlipType').value = 'raw_perch';
+        toggleFinalPerchFields();
         openModal('modalNewSizingSlip');
     }
 
@@ -933,9 +974,38 @@
         document.getElementById('inpBagsHeld').value = 0;
         document.getElementById('inpSizingGrossWeightKg').value = '';
         document.getElementById('inpSizingWeightKg').value = '';
+        ['wetConeWeightKg', 'emptyBagWeightKg', 'paperBagWeightKg', 'soundConeWeightKg', 'cartonWeightKg'].forEach((id) => {
+            const field = document.getElementById(id);
+            if (field) field.value = '0';
+        });
         updateSizingWeightPreview();
         updateSizingCountPreview();
         calculateSizingBags();
+    }
+
+    function toggleFinalPerchFields() {
+        const isFinal = document.getElementById('sizingSlipType').value === 'final_perch';
+        document.getElementById('finalPerchFields').classList.toggle('hidden', !isFinal);
+        document.getElementById('inpSizingGrossWeightKg').required = isFinal;
+        document.getElementById('sizingRatePerKg').required = isFinal;
+        document.getElementById('inpSizingWeightKg').readOnly = isFinal;
+        if (isFinal) {
+            updateFinalPerchPreview();
+        }
+    }
+
+    function updateFinalPerchPreview() {
+        const gross = parseFloat(document.getElementById('inpSizingGrossWeightKg').value) || 0;
+        const deductions = ['wetConeWeightKg', 'emptyBagWeightKg', 'paperBagWeightKg', 'soundConeWeightKg', 'cartonWeightKg']
+            .reduce((total, id) => total + (parseFloat(document.getElementById(id).value) || 0), 0);
+        const net = Math.max(0, gross - deductions);
+        const rate = parseFloat(document.getElementById('sizingRatePerKg').value) || 0;
+        document.getElementById('finalDeductionsPreview').innerText = `${deductions.toFixed(2)} kg`;
+        document.getElementById('finalNetWeightPreview').innerText = `${net.toFixed(2)} kg`;
+        document.getElementById('finalBillPreview').innerText = `Rs. ${(net * rate).toFixed(2)}`;
+        document.getElementById('inpSizingWeightKg').value = net > 0 ? net.toFixed(2) : '';
+        updateSizingWeightPreview();
+        updateSizingCountPreview();
     }
 
     function updateSizingWeightPreview() {

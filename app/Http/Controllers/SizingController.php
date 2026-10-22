@@ -124,6 +124,7 @@ class SizingController extends Controller
     {
         $validated = $request->validate([
             'slip_no' => 'required|string|max:100|unique:sizing_slips,slip_no',
+            'slip_type' => 'required|in:raw_perch,final_perch',
             'sizing_party' => 'required|string|max:150',
             'yarn_quality' => 'required|string|exists:yarn_qualities,name',
             'bags_allocated' => 'required|integer|min:1',
@@ -141,10 +142,57 @@ class SizingController extends Controller
             'selvedge_ends' => 'nullable|integer|min:0',
             'sizing_gross_weight_kg' => 'nullable|numeric|min:0.01',
             'sizing_weight_kg' => 'nullable|numeric|min:0.01',
+            'wet_cone_bags' => 'nullable|integer|min:0',
+            'wet_cone_weight_kg' => 'nullable|numeric|min:0',
+            'empty_bag_count' => 'nullable|integer|min:0',
+            'empty_bag_weight_kg' => 'nullable|numeric|min:0',
+            'paper_bag_count' => 'nullable|integer|min:0',
+            'paper_bag_weight_kg' => 'nullable|numeric|min:0',
+            'sound_cone_count' => 'nullable|integer|min:0',
+            'sound_cone_weight_kg' => 'nullable|numeric|min:0',
+            'carton_count' => 'nullable|integer|min:0',
+            'carton_weight_kg' => 'nullable|numeric|min:0',
+            'sizing_rate_per_kg' => 'nullable|numeric|min:0',
             'bag_transaction_id' => 'required|integer|exists:bag_transactions,id',
             'slip_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
+
+        if ($validated['slip_type'] === 'final_perch') {
+            if (! isset($validated['sizing_gross_weight_kg'], $validated['sizing_rate_per_kg'])) {
+                return back()->withInput()->withErrors([
+                    'sizing_gross_weight_kg' => 'Final Perch needs the invoice gross yarn weight and sizing rate per kg.',
+                ]);
+            }
+
+            $deductionFields = [
+                'wet_cone_weight_kg', 'empty_bag_weight_kg', 'paper_bag_weight_kg',
+                'sound_cone_weight_kg', 'carton_weight_kg',
+            ];
+            $returnedMaterialsWeight = array_sum(array_map(
+                static fn (string $field): float => (float) ($validated[$field] ?? 0),
+                $deductionFields
+            ));
+            $validated['returned_materials_weight_kg'] = round($returnedMaterialsWeight, 2);
+            $validated['sizing_weight_kg'] = round((float) $validated['sizing_gross_weight_kg'] - $returnedMaterialsWeight, 2);
+            if ($validated['sizing_weight_kg'] <= 0) {
+                return back()->withInput()->withErrors([
+                    'sizing_weight_kg' => 'Returned-material deductions must be less than the gross yarn weight.',
+                ]);
+            }
+            $validated['sizing_bill_amount'] = round($validated['sizing_weight_kg'] * (float) $validated['sizing_rate_per_kg'], 2);
+        } else {
+            $validated['returned_materials_weight_kg'] = 0;
+            $validated['sizing_bill_amount'] = null;
+            $validated['sizing_rate_per_kg'] = null;
+            foreach ([
+                'wet_cone_bags', 'wet_cone_weight_kg', 'empty_bag_count', 'empty_bag_weight_kg',
+                'paper_bag_count', 'paper_bag_weight_kg', 'sound_cone_count', 'sound_cone_weight_kg',
+                'carton_count', 'carton_weight_kg',
+            ] as $field) {
+                $validated[$field] = 0;
+            }
+        }
 
         if (empty($validated['total_ends']) && (empty($validated['reed_count']) || empty($validated['fabric_width_inches']))) {
             return back()->withInput()->withErrors([
