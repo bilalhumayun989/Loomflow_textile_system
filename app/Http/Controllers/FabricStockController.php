@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\FabricStock;
+use App\Models\FabricStockMovement;
 use App\Models\SalesContract;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class FabricStockController extends Controller
@@ -49,6 +52,10 @@ class FabricStockController extends Controller
         Collection|LengthAwarePaginator $activeContracts
     ): View {
 
+        $allFabricQualities = FabricStock::orderBy('quality_name')->get();
+        $stockMovements = FabricStockMovement::with('fabricStock')->latest('movement_date')->latest('id')
+            ->when($page === 'dashboard', fn ($query) => $query->limit(10))->paginate($page === 'dashboard' ? 10 : 50);
+
         // Totals
         $totalMetersInStock = FabricStock::sum('current_stock_meters');
         $totalMetersCommitted = FabricStock::sum('committed_contract_meters');
@@ -64,33 +71,98 @@ class FabricStockController extends Controller
             'totalMetersCommitted',
             'totalMetersAvailableOpen',
             'totalRollsInStock',
-            'totalInventoryValue'
+            'totalInventoryValue',
+            'allFabricQualities',
+            'stockMovements'
         ));
     }
 
     public function storeStock(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'quality_name' => 'required|string|max:150|unique:fabric_stocks,quality_name',
-            'construction' => 'required|string|max:150',
-            'width_inches' => 'required|numeric|min:20|max:150',
-            'current_stock_meters' => 'required|numeric|min:0',
-            'total_rolls_in_stock' => 'required|integer|min:0',
-            'committed_contract_meters' => 'required|numeric|min:0',
-            'unit_cost_meter' => 'required|numeric|min:0',
+            'quality_mode' => 'required|in:existing,new',
+            'fabric_stock_id' => 'required_if:quality_mode,existing|nullable|exists:fabric_stocks,id',
+            'quality_name' => 'required_if:quality_mode,new|nullable|string|max:150|unique:fabric_stocks,quality_name',
+            'construction' => 'nullable|string|max:150',
+            'width_inches' => 'nullable|numeric|min:20|max:150',
+            'previous_stock_meters' => 'nullable|numeric|min:0',
+            'daily_received_meters' => 'nullable|numeric|min:0',
+            'adjustment_meters' => 'nullable|numeric|between:-999999999999,999999999999',
+            'dispatch_meters' => 'nullable|numeric|min:0',
+            'rolls_received' => 'nullable|integer|min:0',
+            'total_rolls_in_stock' => 'nullable|integer|min:0',
+            'area' => 'nullable|string|max:100',
+            'unit_cost_meter' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
-        if ($validated['committed_contract_meters'] > $validated['current_stock_meters']) {
-            return back()->withInput()->with('error', 'Committed contract meters cannot exceed total current stock meters.');
-        }
+        $isNew = $validated['quality_mode'] === 'new';
+        $received = (float) ($validated['daily_received_meters'] ?? 0);
+        $adjustment = (float) ($validated['adjustment_meters'] ?? 0);
+        $dispatch = (float) ($validated['dispatch_meters'] ?? 0);
+        $stock = DB::transaction(function () use ($validated, $isNew, $received, $adjustment, $dispatch): FabricStock {
+            if ($isNew) {
+                $stock = FabricStock::create([
+                    'quality_name' => trim($validated['quality_name']),
+                    'construction' => $validated['construction'] ?? null,
+                    'width_inches' => $validated['width_inches'] ?? 63,
+                    'current_stock_meters' => 0,
+                    'total_meters_produced' => 0,
+                    'total_rolls_in_stock' => 0,
+                    'committed_contract_meters' => 0,
+                    'available_open_meters' => 0,
+                    'unit_cost_meter' => $validated['unit_cost_meter'] ?? 0,
+                    'area' => $validated['area'] ?? null,
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+                $previousStock = 0.0;
+            } else {
+                $stock = FabricStock::whereKey($validated['fabric_stock_id'])->lockForUpdate()->firstOrFail();
+                $previousStock = (float) $stock->current_stock_meters;
+            }
 
-        $validated['available_open_meters'] = $validated['current_stock_meters'] - $validated['committed_contract_meters'];
-        $validated['total_meters_produced'] = $validated['current_stock_meters'];
+            $movementDate = now()->toDateString();
+            $existingMovement = FabricStockMovement::where('fabric_stock_id', $stock->id)
+                ->whereDate('movement_date', $movementDate)->lockForUpdate()->first();
+            if ($existingMovement) {
+                $previousStock = (float) $existingMovement->previous_stock_meters;
+                $received += (float) $existingMovement->received_meters;
+                $adjustment += (float) $existingMovement->adjustment_meters;
+                $dispatch += (float) $existingMovement->dispatch_meters;
+            }
 
-        $stock = FabricStock::create($validated);
+            $closingStock = $previousStock + $received + $adjustment - $dispatch;
+            if ($closingStock < 0) {
+                throw ValidationException::withMessages([
+                    'dispatch_meters' => 'Dispatch cannot exceed the available fabric stock.',
+                ]);
+            }
+
+            FabricStockMovement::updateOrCreate(
+                ['fabric_stock_id' => $stock->id, 'movement_date' => $movementDate],
+                [
+                    'previous_stock_meters' => $previousStock,
+                    'received_meters' => $received,
+                    'adjustment_meters' => $adjustment,
+                    'dispatch_meters' => $dispatch,
+                    'closing_stock_meters' => $closingStock,
+                    'rolls_received' => (int) ($validated['rolls_received'] ?? 0) + (int) ($existingMovement?->rolls_received ?? 0),
+                    'area' => $validated['area'] ?? $stock->area,
+                    'remarks' => $validated['notes'] ?? null,
+                ]
+            );
+
+            $stock->current_stock_meters = $closingStock;
+            $stock->total_meters_produced = (float) $stock->total_meters_produced + (float) ($validated['daily_received_meters'] ?? 0);
+            $stock->total_rolls_in_stock = max(0, (int) $stock->total_rolls_in_stock + (int) ($validated['rolls_received'] ?? 0));
+            $stock->available_open_meters = max(0, $closingStock - (float) $stock->committed_contract_meters);
+            $stock->area = $validated['area'] ?? $stock->area;
+            $stock->save();
+
+            return $stock;
+        });
 
         return redirect()->route('fabric.index')
-            ->with('success', "Fabric Quality '{$stock->quality_name}' added to inventory ({$stock->current_stock_meters}m stock, {$stock->available_open_meters}m open sale ready)!");
+            ->with('success', "Stock updated for {$stock->quality_name}: {$stock->current_stock_meters}m closing balance.");
     }
 }

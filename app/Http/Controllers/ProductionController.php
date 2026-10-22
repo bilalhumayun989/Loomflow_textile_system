@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FabricStock;
+use App\Models\FabricStockMovement;
 use App\Models\Production;
 use App\Models\SalesContract;
 use App\Models\SizingBeam;
@@ -98,6 +99,10 @@ class ProductionController extends Controller
 
     public function storeProduction(Request $request): RedirectResponse
     {
+        if ($request->has('rolls')) {
+            return $this->storeRollRegister($request);
+        }
+
         $validated = $request->validate([
             'production_date' => 'required|date',
             'shift' => 'required|in:Day,Night',
@@ -154,6 +159,7 @@ class ProductionController extends Controller
 
             $fabric->total_meters_produced += $netMetersProduced;
             $fabric->current_stock_meters += $netMetersProduced;
+            $fabric->daily_received_meters += $netMetersProduced;
             $activeContractMeters = SalesContract::where('fabric_stock_id', $fabric->id)
                 ->where('status', 'active')
                 ->sum('remaining_meters');
@@ -181,5 +187,76 @@ class ProductionController extends Controller
 
         return redirect()->route('production.index')
             ->with('success', "Production recorded for {$production->loom_no}! Produced: {$netMetersProduced}m | Consumed: {$beamConsumed}m | Leakage: {$leakageMeters}m ({$leakagePercentage}%) | Efficiency: {$efficiency}%");
+    }
+
+    private function storeRollRegister(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'production_date' => 'required|date',
+            'fabric_stock_id' => 'required|exists:fabric_stocks,id',
+            'rolls' => 'required|array|min:1|max:200',
+            'rolls.*.loom_no' => 'required|string|max:50',
+            'rolls.*.meters' => 'required|numeric|gt:0|max:100000',
+            'remarks' => 'nullable|string|max:1000',
+        ]);
+
+        $totalMeters = round(array_sum(array_map(static fn (array $roll): float => (float) $roll['meters'], $validated['rolls'])), 2);
+
+        DB::transaction(function () use ($validated, $totalMeters): void {
+            $fabric = FabricStock::whereKey($validated['fabric_stock_id'])->lockForUpdate()->firstOrFail();
+            $movementDate = $validated['production_date'];
+            $movement = FabricStockMovement::where('fabric_stock_id', $fabric->id)
+                ->whereDate('movement_date', $movementDate)->lockForUpdate()->first();
+            $previousStock = $movement ? (float) $movement->previous_stock_meters : (float) $fabric->current_stock_meters;
+            $receivedTotal = $movement ? (float) $movement->received_meters + $totalMeters : $totalMeters;
+            $adjustment = (float) ($movement?->adjustment_meters ?? 0);
+            $dispatch = (float) ($movement?->dispatch_meters ?? 0);
+            $closingStock = $previousStock + $receivedTotal + $adjustment - $dispatch;
+
+            foreach ($validated['rolls'] as $roll) {
+                Production::create([
+                    'production_date' => $movementDate,
+                    'shift' => 'Day',
+                    'loom_no' => $roll['loom_no'],
+                    'operator_name' => 'Production register',
+                    'fabric_stock_id' => $fabric->id,
+                    'fabric_quality' => $fabric->quality_name,
+                    'start_meter' => 0,
+                    'end_meter' => $roll['meters'],
+                    'net_meters_produced' => $roll['meters'],
+                    'beam_meters_consumed' => 0,
+                    'expected_fabric_meters' => 0,
+                    'leakage_waste_meters' => 0,
+                    'leakage_percentage' => 0,
+                    'picks_per_inch' => 60,
+                    'rpm' => 350,
+                    'efficiency_percentage' => 0,
+                    'remarks' => $validated['remarks'] ?? null,
+                ]);
+            }
+
+            FabricStockMovement::updateOrCreate(
+                ['fabric_stock_id' => $fabric->id, 'movement_date' => $movementDate],
+                [
+                    'previous_stock_meters' => $previousStock,
+                    'received_meters' => $receivedTotal,
+                    'adjustment_meters' => $adjustment,
+                    'dispatch_meters' => $dispatch,
+                    'closing_stock_meters' => $closingStock,
+                    'rolls_received' => (int) ($movement?->rolls_received ?? 0) + count($validated['rolls']),
+                    'area' => $movement?->area ?? $fabric->area,
+                    'remarks' => $validated['remarks'] ?? $movement?->remarks,
+                ]
+            );
+
+            $fabric->current_stock_meters = $closingStock;
+            $fabric->daily_received_meters = $receivedTotal;
+            $fabric->total_meters_produced = (float) $fabric->total_meters_produced + $totalMeters;
+            $fabric->total_rolls_in_stock += count($validated['rolls']);
+            $fabric->available_open_meters = max(0, $closingStock - (float) $fabric->committed_contract_meters);
+            $fabric->save();
+        });
+
+        return redirect()->route('production.index')->with('success', "Recorded {$totalMeters}m across ".count($validated['rolls']).' loom rolls and updated fabric stock.');
     }
 }

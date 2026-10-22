@@ -229,59 +229,18 @@
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
-                    <thead>
-                        <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
-                            <th class="px-4 py-3">Quality / Variety Name</th>
-                            <th class="px-4 py-3">Construction</th>
-                            <th class="px-4 py-3 text-center">Width</th>
-                            <th class="px-4 py-3 text-center">Rolls</th>
-                            <th class="px-4 py-3 text-right bg-zinc-900/5 border-x border-zinc-200 text-zinc-700">Open Sale Ready</th>
-                            <th class="px-4 py-3 text-right bg-zinc-100/70 border-r border-zinc-200 text-zinc-600">Committed</th>
-                            <th class="px-4 py-3 text-right font-black text-zinc-900">Current Stock</th>
-                            <th class="px-4 py-3 text-right">Rate / m</th>
-                            <th class="px-4 py-3 text-right">Action</th>
-                        </tr>
-                    </thead>
+                    <thead><tr class="border-b border-zinc-200 bg-zinc-50 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500"><th class="px-4 py-3">Quality / Date</th><th class="px-4 py-3 text-right">Previous</th><th class="px-4 py-3 text-right">Received</th><th class="px-4 py-3 text-right">Adjustment (+/−)</th><th class="px-4 py-3 text-right">Total Stock</th><th class="px-4 py-3 text-right">Dispatch</th><th class="px-4 py-3">Area</th><th class="px-4 py-3">Remarks</th></tr></thead>
                     <tbody class="divide-y divide-zinc-100">
-                        @forelse($fabricStocks as $fab)
-                            <tr class="hover:bg-zinc-50 transition-colors">
-                                <td class="px-4 py-3">
-                                    <div class="font-bold text-zinc-900">{{ $fab->quality_name }}</div>
-                                    @if($fab->notes)
-                                        <div class="text-[10px] text-zinc-400 mt-0.5">{{ $fab->notes }}</div>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 font-mono text-zinc-600 text-[11px]">{{ $fab->construction ?? '—' }}</td>
-                                <td class="px-4 py-3 text-center font-mono text-zinc-500">{{ $fab->width_inches }}"</td>
-                                <td class="px-4 py-3 text-center font-mono font-bold text-zinc-800">{{ $fab->total_rolls_in_stock }}</td>
-                                <td class="px-4 py-3 text-right font-mono font-black text-zinc-900 bg-zinc-50 border-x border-zinc-200 text-sm">
-                                    {{ number_format($fab->available_open_meters, 0) }}m
-                                </td>
-                                <td class="px-4 py-3 text-right font-mono font-bold text-zinc-600 bg-zinc-50 border-r border-zinc-200">
-                                    {{ number_format($fab->committed_contract_meters, 0) }}m
-                                </td>
-                                <td class="px-4 py-3 text-right font-mono font-black text-zinc-900 text-sm">
-                                    {{ number_format($fab->current_stock_meters, 0) }}m
-                                </td>
-                                <td class="px-4 py-3 text-right font-mono text-zinc-500">Rs. {{ number_format($fab->unit_cost_meter, 2) }}</td>
-                                <td class="px-4 py-3 text-right">
-                                    <a href="{{ route('sales.index') }}"
-                                       class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 text-[11px] font-bold transition-all inline-block whitespace-nowrap">
-                                        Sell &rarr;
-                                    </a>
-                                </td>
-                            </tr>
+                        @forelse($stockMovements as $movement)
+                            <tr class="hover:bg-zinc-50"><td class="px-4 py-3"><div class="font-bold text-zinc-900">{{ $movement->fabricStock->quality_name }}</div><div class="text-[10px] text-zinc-400">{{ $movement->movement_date->format('d-m-Y') }}</div></td><td class="px-4 py-3 text-right font-mono">{{ number_format($movement->previous_stock_meters, 0) }}</td><td class="px-4 py-3 text-right font-mono">{{ number_format($movement->received_meters, 0) }}</td><td class="px-4 py-3 text-right font-mono">{{ number_format($movement->adjustment_meters, 0) }}</td><td class="px-4 py-3 text-right font-mono font-black">{{ number_format($movement->closing_stock_meters, 0) }}</td><td class="px-4 py-3 text-right font-mono">{{ number_format($movement->dispatch_meters, 0) }}</td><td class="px-4 py-3">{{ $movement->area ?: '—' }}</td><td class="px-4 py-3 text-zinc-500">{{ $movement->remarks ?: '—' }}</td></tr>
                         @empty
-                            <tr>
-                                <td colspan="9" class="px-4 py-12 text-center">
-                                    <div class="text-zinc-400 text-sm font-medium">No fabric qualities recorded yet</div>
-                                    <div class="text-zinc-300 text-xs mt-1">Click "+ Add Quality Spec" to add your first fabric type</div>
-                                </td>
-                            </tr>
+                            <tr><td colspan="8" class="px-4 py-12 text-center text-zinc-400">No daily stock entries yet. Add a quality or record today’s stock.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+
+            <div class="border-t border-zinc-100 px-5 py-3">{{ $stockMovements->links() }}</div>
 
             @if($page === 'inventory')
                 <div class="px-6 py-4 border-t border-zinc-100">{{ $fabricStocks->links() }}</div>
@@ -403,81 +362,24 @@
 </div>{{-- end grid --}}
 
 
-{{-- ============================================================
-     MODAL: ADD NEW FABRIC QUALITY
-============================================================ --}}
-<div id="modalAddFabric" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white border border-zinc-200 rounded-3xl max-w-lg w-full p-6 shadow-xl relative my-8">
-        <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
-            <div>
-                <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-zinc-700"></span>
-                    Add New Fabric Quality Specification
-                </h3>
-                <p class="text-xs text-zinc-400 mt-0.5">Add a woven fabric variety to the inventory system</p>
-            </div>
-            <button type="button" onclick="closeModal('modalAddFabric')" class="text-zinc-400 hover:text-zinc-900 p-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
-        <form action="{{ route('fabric.store') }}" method="POST" class="mt-4 space-y-4">
-            @csrf
-            <div>
-                <label class="block text-xs font-semibold text-zinc-600 mb-1">Fabric Quality / Commercial Name *</label>
-                <input type="text" name="quality_name" required placeholder="e.g. Cotton Sheeting 68x68 / 30x30"
-                       class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Construction Details *</label>
-                    <input type="text" name="construction" required placeholder='e.g. 30x30 / 68x68 63" Grey'
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Width (Inches) *</label>
-                    <input type="number" step="0.5" name="width_inches" required value="63.0"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Current Stock (Meters) *</label>
-                    <input type="number" step="0.01" name="current_stock_meters" required min="0" placeholder="5000"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Rolls / Thaans *</label>
-                    <input type="number" name="total_rolls_in_stock" required min="0" placeholder="50"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Committed to Contracts (Meters) *</label>
-                    <input type="number" step="0.01" name="committed_contract_meters" required value="0" min="0"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                    <span class="text-[10px] text-zinc-400">Remaining = open sale ready</span>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Unit Cost / Rate Per Meter (Rs.) *</label>
-                    <input type="number" step="0.01" name="unit_cost_meter" required min="0" placeholder="195"
-                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-zinc-600 mb-1">Notes / Weave Type</label>
-                <input type="text" name="notes" placeholder="e.g. Plain weave, twill, dobby design"
-                       class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-            </div>
-            <div class="pt-3 border-t border-zinc-100 flex justify-end gap-3">
-                <button type="button" onclick="closeModal('modalAddFabric')"
-                        class="px-4 py-2 rounded-xl bg-zinc-100 text-zinc-600 text-xs font-semibold">Cancel</button>
-                <button type="submit"
-                        class="px-5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 text-xs font-black shadow-sm">
-                    Save Fabric Quality
-                </button>
-            </div>
+{{-- Stock entry: existing quality auto-fills its current balance; new quality starts at zero. --}}
+<div id="modalAddFabric" class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-zinc-900/50 p-4 backdrop-blur-sm">
+    <div class="my-8 w-full max-w-2xl rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl">
+        <div class="mb-4 flex items-center justify-between border-b border-zinc-100 pb-3"><div><h3 class="text-lg font-bold">Fabric Stock Entry</h3><p class="mt-1 text-xs text-zinc-500">Choose an existing quality or create one at zero stock.</p></div><button type="button" onclick="closeModal('modalAddFabric')">×</button></div>
+        <form action="{{ route('fabric.store') }}" method="POST" class="space-y-4">@csrf
+            <label class="block text-xs font-semibold">Entry type<select id="qualityMode" name="quality_mode" onchange="toggleFabricQualityMode()" class="mt-1 w-full rounded-xl border px-3 py-2"><option value="existing">Update existing quality</option><option value="new">Create new quality</option></select></label>
+            <div id="existingQualityFields"><label class="block text-xs font-semibold">Fabric quality<select id="existingFabricQuality" name="fabric_stock_id" onchange="fillExistingFabricStock()" class="mt-1 w-full rounded-xl border bg-white px-3 py-2"><option value="">Choose quality</option>@foreach($allFabricQualities as $quality)<option value="{{ $quality->id }}" data-stock="{{ $quality->current_stock_meters }}" data-area="{{ $quality->area }}">{{ $quality->quality_name }} ({{ number_format($quality->current_stock_meters, 0) }}m)</option>@endforeach</select></label></div>
+            <div id="newQualityFields" class="hidden space-y-3"><div class="grid grid-cols-2 gap-3"><label class="text-xs font-semibold">New quality name<input id="newQualityName" name="quality_name" placeholder="90 x 70 - 43 inch" class="mt-1 w-full rounded-xl border px-3 py-2"></label><label class="text-xs font-semibold">Construction<input name="construction" placeholder="52x52 / 72x78" class="mt-1 w-full rounded-xl border px-3 py-2"></label></div><div class="grid grid-cols-2 gap-3"><label class="text-xs font-semibold">Width<input name="width_inches" type="number" step="0.5" value="63" class="mt-1 w-full rounded-xl border px-3 py-2"></label><label class="text-xs font-semibold">Rate per meter<input name="unit_cost_meter" type="number" step="0.01" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label></div><p class="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-500">Previous stock is fixed at 0 for a new quality.</p></div>
+            <div class="grid grid-cols-2 gap-3"><label class="text-xs font-semibold">Previous stock (m)<input id="previousStockMeters" name="previous_stock_meters" type="number" readonly value="0" class="mt-1 w-full rounded-xl border bg-zinc-100 px-3 py-2 font-mono font-bold"></label><label class="text-xs font-semibold">Received today (m)<input name="daily_received_meters" type="number" min="0" step="0.01" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label></div>
+            <div class="grid grid-cols-2 gap-3"><label class="text-xs font-semibold">Adjustment (+ / − m)<input name="adjustment_meters" type="number" step="0.01" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label><label class="text-xs font-semibold">Dispatch (m)<input name="dispatch_meters" type="number" min="0" step="0.01" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label></div>
+            <div class="grid grid-cols-2 gap-3"><label class="text-xs font-semibold">Rolls received<input name="rolls_received" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label><label class="text-xs font-semibold">Area<input id="stockArea" name="area" class="mt-1 w-full rounded-xl border px-3 py-2"></label></div>
+            <label class="block text-xs font-semibold">Remarks<input name="notes" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+            <div class="flex justify-end gap-2 border-t pt-3"><button type="button" onclick="closeModal('modalAddFabric')" class="rounded-xl bg-zinc-100 px-4 py-2 text-xs">Cancel</button><button class="rounded-xl bg-zinc-900 px-5 py-2 text-xs font-bold text-white">Save stock entry</button></div>
         </form>
     </div>
 </div>
+<script>
+function toggleFabricQualityMode(){const isNew=document.getElementById('qualityMode').value==='new';document.getElementById('existingQualityFields').classList.toggle('hidden',isNew);document.getElementById('newQualityFields').classList.toggle('hidden',!isNew);document.getElementById('existingFabricQuality').required=!isNew;document.getElementById('newQualityName').required=isNew;document.getElementById('previousStockMeters').value='0';if(!isNew){fillExistingFabricStock()}}
+function fillExistingFabricStock(){const option=document.getElementById('existingFabricQuality').selectedOptions[0];document.getElementById('previousStockMeters').value=option?.dataset.stock||'0';document.getElementById('stockArea').value=option?.dataset.area||''}
+</script>
 @endsection
