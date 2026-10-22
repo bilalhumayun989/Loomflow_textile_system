@@ -114,6 +114,10 @@
                                     $activeModule = 'Sales & Slips';
                                     $activeColor = 'text-zinc-800 border-zinc-400 bg-zinc-100';
                                     $activeIcon = 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
+                                } elseif (str_starts_with($currentRoute, 'invoices')) {
+                                    $activeModule = 'Invoices & Accounts';
+                                    $activeColor = 'text-zinc-800 border-zinc-400 bg-zinc-100';
+                                    $activeIcon = 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a2 2 0 01.707.293l5.414 5.414A2 2 0 0119 9v10a2 2 0 01-2 2z';
                                 } elseif (str_starts_with($currentRoute, 'production')) {
                                     $activeModule = 'Production';
                                     $activeColor = 'text-zinc-800 border-zinc-400 bg-zinc-100';
@@ -204,6 +208,13 @@
                                             <div class="font-semibold">5. Sales & Slips</div>
                                             <div class="text-[10px] text-zinc-400">Open Slips & Multi-Contracts</div>
                                         </div>
+                                    </a>
+
+                                    <a href="{{ route('invoices.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium {{ str_starts_with($currentRoute, 'invoices') ? 'bg-zinc-900 text-zinc-50' : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                                        <div class="w-7 h-7 rounded-lg {{ str_starts_with($currentRoute, 'invoices') ? 'bg-zinc-700 text-zinc-200' : 'bg-zinc-100 text-zinc-600' }} flex items-center justify-center">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a2 2 0 01.707.293l5.414 5.414A2 2 0 0119 9v10a2 2 0 01-2 2z"/></svg>
+                                        </div>
+                                        <div><div class="font-semibold">7. Invoices & Accounts</div><div class="text-[10px] text-zinc-400">Customers, receipts & bank balances</div></div>
                                     </a>
 
                                     <a href="{{ route('production.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium {{ str_starts_with($currentRoute, 'production') ? 'bg-zinc-900 text-zinc-50' : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900' }}">

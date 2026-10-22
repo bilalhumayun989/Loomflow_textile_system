@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FabricStock;
+use App\Models\Customer;
 use App\Models\Ledger;
 use App\Models\Sale;
 use App\Models\SalesContract;
@@ -151,6 +152,7 @@ class SalesController extends Controller
             $fabric->save();
 
             $sale = Sale::create($validated);
+            $this->syncCustomer($sale->buyer_name, $sale->buyer_phone);
             Ledger::create([
                 'party_name' => $sale->buyer_name,
                 'party_type' => 'fabric_buyer',
@@ -234,6 +236,7 @@ class SalesController extends Controller
         $contract = DB::transaction(function () use ($validated): SalesContract {
             $fabric = FabricStock::whereKey($validated['fabric_stock_id'])->lockForUpdate()->firstOrFail();
             $contract = SalesContract::create($validated);
+            $this->syncCustomer($contract->buyer_name, $contract->buyer_phone);
             $activeContractMeters = SalesContract::where('fabric_stock_id', $fabric->id)
                 ->where('status', 'active')
                 ->sum('remaining_meters');
@@ -252,5 +255,23 @@ class SalesController extends Controller
 
         return redirect()->route('sales.index')
             ->with('success', "Sales Contract {$contract->contract_no} for {$contract->buyer_name} ({$contract->total_meters}m) registered successfully!");
+    }
+
+    private function syncCustomer(string $name, ?string $phone): Customer
+    {
+        $normalizedName = mb_strtolower(trim($name));
+        $customer = Customer::query()->whereRaw('LOWER(name) = ?', [$normalizedName])->first();
+
+        if ($customer) {
+            return $customer;
+        }
+
+        $phone = filled($phone) && ! Customer::where('phone', trim($phone))->exists() ? trim($phone) : null;
+
+        return Customer::create([
+            'name' => trim($name),
+            'phone' => $phone,
+            'status' => 'active',
+        ]);
     }
 }

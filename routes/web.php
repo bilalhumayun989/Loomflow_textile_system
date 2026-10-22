@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BagController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FabricStockController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\ProductionController;
@@ -64,6 +65,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/sales/contracts', [SalesController::class, 'contracts'])->name('sales.contracts');
     Route::post('/sales', [SalesController::class, 'storeSale'])->name('sales.store');
     Route::post('/sales/contract', [SalesController::class, 'storeContract'])->name('sales.contract.store');
+
+    // 8. Invoices (customer billing, receipts, and cash/bank account balances)
+    Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('/invoices/records', [InvoiceController::class, 'invoices'])->name('invoices.invoices');
+    Route::get('/invoices/customers', [InvoiceController::class, 'customers'])->name('invoices.customers');
+    Route::get('/invoices/payments', [InvoiceController::class, 'payments'])->name('invoices.payments');
+    Route::get('/invoices/accounts', [InvoiceController::class, 'accounts'])->name('invoices.accounts');
+    Route::post('/invoices/customers', [InvoiceController::class, 'storeCustomer'])->name('invoices.customer.store');
+    Route::post('/invoices', [InvoiceController::class, 'storeInvoice'])->name('invoices.store');
+    Route::post('/invoices/payments', [InvoiceController::class, 'storePayment'])->name('invoices.payment.store');
+    Route::post('/invoices/accounts', [InvoiceController::class, 'storeAccount'])->name('invoices.account.store');
+    Route::post('/invoices/accounts/transactions', [InvoiceController::class, 'storeAccountTransaction'])->name('invoices.account-transaction.store');
 
     // 6. Production (Loom-wise daily production, beam length consumption, leakage/loss calculation)
     Route::get('/production', [ProductionController::class, 'index'])->name('production.index');

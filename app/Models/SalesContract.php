@@ -120,6 +120,11 @@ class SalesContract extends Model
         return $this->hasMany(Sale::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     public function fabricStock(): BelongsTo
     {
         return $this->belongsTo(FabricStock::class);

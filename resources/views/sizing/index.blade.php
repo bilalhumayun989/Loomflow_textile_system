@@ -194,7 +194,6 @@
             <div class="mt-3 grid gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-[11px] leading-5 text-zinc-600 md:grid-cols-2">
                 <p><strong class="text-zinc-800">Estimated yarn count (Ne):</strong> ends × set length in metres ÷ (1693.6 × net yarn weight in kg). The set length is used because it represents the warp yarn length; panna changes expected fabric output, not yarn count.</p>
                 <p><strong class="text-zinc-800">Net yarn per woven metre:</strong> net sizing weight in lb ÷ actual woven metres recorded in Production. This is a weight ratio, not the yarn count.</p>
-                <p class="md:col-span-2 rounded-lg bg-amber-50 px-3 py-2 text-amber-900"><strong>Example check:</strong> 10,080 ends, 22,400 gaz (20,482.56m), and 2,266kg calculate to about 53.80 Ne with this formula, not 52.70. The shared 52.70 figure needs its source inputs or adjustment checked; it should not be treated as proof of correct handling.</p>
             </div>
         </div>
         <div class="overflow-x-auto">
