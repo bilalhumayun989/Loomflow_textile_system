@@ -76,6 +76,16 @@
                 @endif
             </a>
 
+            {{-- Sizing Balance --}}
+            <a href="{{ route('sizing.balance') }}"
+               class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all {{ $page === 'balance' ? 'bg-zinc-900 text-zinc-50 shadow-sm' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg {{ $page === 'balance' ? 'bg-zinc-700' : 'bg-zinc-100' }}">
+                    <svg class="h-3.5 w-3.5 {{ $page === 'balance' ? 'text-zinc-100' : 'text-zinc-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a2 2 0 01.707.293l5.414 5.414A2 2 0 0119 9v10a2 2 0 01-2 2z"/></svg>
+                </span>
+                <div><span class="block leading-tight">Sizing Balance</span><span class="block text-[10px] font-normal text-zinc-400">Bags, weight & loom check</span></div>
+                @if($page === 'balance')<span class="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400"></span>@endif
+            </a>
+
         </nav>
 
         {{-- Quick actions --}}
@@ -115,7 +125,7 @@
                 <span class="w-2.5 h-2.5 rounded-full bg-zinc-700"></span>
                 <span class="text-xs font-bold uppercase tracking-wider text-zinc-500">Module 02</span>
             </div>
-            <h1 class="text-2xl font-black text-zinc-900 tracking-tight">{{ ['dashboard' => 'Sizing Dashboard', 'beams' => 'Beams Tracking', 'slips' => 'Sizing Slips'][$page] }}</h1>
+            <h1 class="text-2xl font-black text-zinc-900 tracking-tight">{{ ['dashboard' => 'Sizing Dashboard', 'beams' => 'Beams Tracking', 'slips' => 'Sizing Slips', 'balance' => 'Sizing Balance'][$page] }}</h1>
         </div>
         <div class="flex items-center gap-3">
             <button type="button" onclick="openModal('modalYarnQualities')" class="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-300 text-xs font-bold transition-colors">Manage Yarn Qualities</button>
@@ -176,7 +186,73 @@
     {{-- ============================================================
          SECTION 1 — Beams Tracking
     ============================================================ --}}
-    @if($pendingSizingTransactions->isNotEmpty())
+    @if ($page === 'balance')
+    <section class="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+        <div class="border-b border-zinc-100 bg-zinc-50 px-6 py-4">
+            <h2 class="text-sm font-extrabold text-zinc-900">Sizing Reconciliation</h2>
+            <p class="mt-1 max-w-4xl text-xs leading-5 text-zinc-500">Check each slip's bags (sent = used + returned + held), bill weights, and cloth recorded from production. Loom shortage is final only after every beam is exhausted; before then it includes fabric that has not been woven yet.</p>
+            <div class="mt-3 grid gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-[11px] leading-5 text-zinc-600 md:grid-cols-2">
+                <p><strong class="text-zinc-800">Estimated yarn count (Ne):</strong> ends × set length in metres ÷ (1693.6 × net yarn weight in kg). The set length is used because it represents the warp yarn length; panna changes expected fabric output, not yarn count.</p>
+                <p><strong class="text-zinc-800">Net yarn per woven metre:</strong> net sizing weight in lb ÷ actual woven metres recorded in Production. This is a weight ratio, not the yarn count.</p>
+                <p class="md:col-span-2 rounded-lg bg-amber-50 px-3 py-2 text-amber-900"><strong>Example check:</strong> 10,080 ends, 22,400 gaz (20,482.56m), and 2,266kg calculate to about 53.80 Ne with this formula, not 52.70. The shared 52.70 figure needs its source inputs or adjustment checked; it should not be treated as proof of correct handling.</p>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[1100px] text-left text-xs">
+                <thead><tr class="border-b border-zinc-200 bg-white text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                    <th class="px-4 py-3">Sizing Slip</th><th class="px-4 py-3">Yarn / Party</th><th class="px-4 py-3 text-right">Bags Sent</th><th class="px-4 py-3 text-right">Used / Returned / Held</th><th class="px-4 py-3">Bag Balance</th><th class="px-4 py-3 text-right">Gross / Net Weight</th><th class="px-4 py-3 text-right">Expected Cloth</th><th class="px-4 py-3 text-right">Woven / Expected on Consumed Warp</th><th class="px-4 py-3 text-right">Recorded Loom Leakage</th><th class="px-4 py-3">Count / Yarn per Woven Metre</th><th class="px-4 py-3">Beam Progress</th>
+                </tr></thead>
+                <tbody class="divide-y divide-zinc-100">
+                    @forelse($slips as $s)
+                        @php
+                            $bagVariance = (int) $s->bags_allocated - (int) $s->bags_used - (int) $s->bags_returned_to_factory - (int) $s->bags_held_with_sizing;
+                            $grossKg = $s->sizing_gross_weight_pounds !== null ? (float) $s->sizing_gross_weight_pounds * 0.45359237 : null;
+                            $netKg = $s->sizing_weight_pounds !== null ? (float) $s->sizing_weight_pounds * 0.45359237 : null;
+                            $expectedMeters = $s->expectedFabricMeters();
+                            $wovenMeters = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
+                            $expectedConsumedMeters = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_expected_fabric_meters ?? 0));
+                            $leakageMeters = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_leakage_waste_meters ?? 0));
+                            $estimatedCount = $s->estimatedWarpCountNe();
+                            $declaredCount = $s->declaredYarnCountNe();
+                            $netWeightPounds = $s->sizing_weight_pounds !== null ? (float) $s->sizing_weight_pounds : null;
+                            $weightPerWovenMeter = $netWeightPounds !== null && $wovenMeters > 0 ? $netWeightPounds / $wovenMeters : null;
+                            $finishedBeams = $s->beams->where('status', 'exhausted')->count();
+                            $allBeamsFinished = $s->beams->isNotEmpty() && $finishedBeams === $s->beams->count();
+                        @endphp
+                        <tr class="align-top hover:bg-zinc-50">
+                            <td class="px-4 py-4"><span class="font-mono font-bold text-zinc-900">{{ $s->slip_no }}</span><span class="mt-1 block text-[10px] text-zinc-400">{{ $s->slip_date->format('d M, Y') }}</span><span class="block text-[10px] text-zinc-500">{{ $s->sizing_party }}</span></td>
+                            <td class="px-4 py-4"><span class="font-semibold text-zinc-700">{{ $s->yarn_quality }}</span><span class="mt-1 block text-[10px] text-zinc-400">{{ number_format($s->total_ends ?? 0) }} ends · {{ number_format($s->width_multiplier, 2) }} panna</span></td>
+                            <td class="px-4 py-4 text-right font-mono font-bold text-zinc-900">{{ $s->bags_allocated }}</td>
+                            <td class="px-4 py-4 text-right font-mono text-zinc-700">{{ $s->bags_used }} / {{ $s->bags_returned_to_factory }} / {{ $s->bags_held_with_sizing }}</td>
+                            <td class="px-4 py-4">
+                                @if($bagVariance === 0)<span class="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">Balanced</span>
+                                @elseif($bagVariance > 0)<span class="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">{{ $bagVariance }} unaccounted</span>
+                                @else<span class="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700">{{ abs($bagVariance) }} over-reported</span>@endif
+                            </td>
+                            <td class="px-4 py-4 text-right font-mono text-zinc-700">{{ $grossKg !== null ? number_format($grossKg, 2).' kg' : '—' }}<span class="block text-[10px] text-zinc-400">net {{ $netKg !== null ? number_format($netKg, 2).' kg' : 'not entered' }}</span>@if($grossKg !== null && $netKg !== null)<span class="block text-[10px] text-zinc-500">{{ number_format($grossKg - $netKg, 2) }} kg deduction</span>@endif</td>
+                            <td class="px-4 py-4 text-right font-mono font-semibold text-zinc-800">{{ number_format($expectedMeters, 2) }}m<span class="block text-[10px] font-normal text-zinc-400">set {{ number_format($s->total_length_meters, 2) }}m × {{ number_format($s->width_multiplier, 2) }}</span></td>
+                            <td class="px-4 py-4 text-right font-mono text-zinc-700">{{ number_format($wovenMeters, 2) }}m / {{ number_format($expectedConsumedMeters, 2) }}m<span class="block text-[10px] text-zinc-400">actual / expected for warp used</span></td>
+                            <td class="px-4 py-4 text-right font-mono font-bold text-amber-700">{{ number_format($leakageMeters, 2) }}m<span class="block text-[10px] font-normal text-zinc-400">from production records</span></td>
+                            <td class="px-4 py-4 text-right font-mono text-zinc-700">
+                                {{ $estimatedCount !== null ? number_format($estimatedCount, 2).' Ne' : '—' }}
+                                <span class="block text-[10px] font-normal text-zinc-400">{{ $declaredCount !== null && $estimatedCount !== null ? 'declared '.$declaredCount.' Ne · difference '.number_format($estimatedCount - $declaredCount, 2) : 'estimate from ends, set length & net kg' }}</span>
+                                <span class="mt-1 block font-bold text-zinc-800">{{ $weightPerWovenMeter !== null ? number_format($weightPerWovenMeter, 6).' lb/m' : '— lb/m' }}</span>
+                                <span class="block text-[10px] font-normal text-zinc-400">net lb ÷ actual woven m</span>
+                            </td>
+                            <td class="px-4 py-4"><span class="font-semibold text-zinc-800">{{ $finishedBeams }} / {{ $s->beams->count() }} exhausted</span><span class="mt-1 block text-[10px] font-bold {{ $allBeamsFinished ? 'text-emerald-700' : 'text-amber-700' }}">{{ $allBeamsFinished ? 'Cloth balance final' : 'Cloth balance provisional' }}</span><span class="block text-[10px] text-zinc-400">{{ number_format(max(0, $expectedMeters - $expectedConsumedMeters), 2) }}m expected on unconsumed warp</span></td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="11" class="px-6 py-12 text-center text-sm text-zinc-400">No sizing slips yet. Once a sizing slip is entered, its bag, weight, beam, and production balance will appear here.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <div class="border-t border-zinc-100 px-6 py-4">{{ $slips->links() }}</div>
+        <div class="border-t border-zinc-100 bg-zinc-50 px-6 py-3 text-[10px] leading-5 text-zinc-500">A bag or weight mismatch is a reconciliation flag that needs checking against the signed gate pass and sizing bill. It does not by itself establish theft or fraud. Loom leakage shown here is the sum saved on production entries; remaining warp is listed separately.</div>
+    </section>
+    @endif
+
+    @if($page === 'dashboard' && $pendingSizingTransactions->isNotEmpty())
     <section class="overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
         <div class="flex items-center justify-between border-b border-amber-100 bg-amber-50 px-6 py-4">
             <div>
@@ -241,7 +317,8 @@
                         <th class="px-4 py-3">Beam #</th>
                         <th class="px-4 py-3">Sizing Slip Ref</th>
                         <th class="px-4 py-3">Yarn Quality</th>
-                        <th class="px-4 py-3 text-right">Initial Length</th>
+                        <th class="px-4 py-3 text-right">Warp Length</th>
+                        <th class="px-4 py-3 text-right">Expected Fabric</th>
                         <th class="px-4 py-3 text-right">Actual Woven</th>
                         <th class="px-4 py-3 text-right">Production Short / Over</th>
                         <th class="px-4 py-3 text-right">Remaining Length</th>
@@ -259,8 +336,11 @@
                             <td class="px-4 py-3 text-right font-mono text-zinc-500">{{ number_format($bm->total_length_meters, 0) }}m</td>
                             @php
                                 $actualWovenMeters = (float) ($bm->productions_sum_net_meters_produced ?? 0);
-                                $productionVarianceMeters = (float) $bm->total_length_meters - $actualWovenMeters;
+                                $beamWidthMultiplier = (float) ($bm->sizingSlip?->width_multiplier ?? 1);
+                                $expectedFabricMeters = (float) $bm->total_length_meters * $beamWidthMultiplier;
+                                $productionVarianceMeters = $expectedFabricMeters - $actualWovenMeters;
                             @endphp
+                            <td class="px-4 py-3 text-right font-mono text-zinc-600">{{ number_format($expectedFabricMeters, 2) }}m</td>
                             <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">{{ number_format($actualWovenMeters, 2) }}m</td>
                             <td class="px-4 py-3 text-right font-mono {{ $productionVarianceMeters >= 0 ? 'text-amber-700' : 'text-emerald-700' }}">
                                 {{ number_format(abs($productionVarianceMeters), 2) }}m {{ $productionVarianceMeters >= 0 ? 'short' : 'over' }}
@@ -299,7 +379,14 @@
                                     @endif
                                     @if($bm->status !== 'exhausted')
                                         <button type="button"
-                                                onclick="openMountModal('{{ $bm->id }}', '{{ $bm->beam_no }}', '{{ $bm->assigned_loom_no }}')"
+                                                onclick="openMountModal(this)"
+                                                data-id="{{ $bm->id }}"
+                                                data-beam-no="{{ $bm->beam_no }}"
+                                                data-loom="{{ $bm->assigned_loom_no }}"
+                                                data-quality="{{ $bm->yarn_quality }}"
+                                                data-warp-meters="{{ number_format((float) $bm->total_length_meters, 2, '.', '') }}"
+                                                data-remaining-meters="{{ number_format((float) $bm->remaining_length_meters, 2, '.', '') }}"
+                                                data-width-factor="{{ number_format((float) ($bm->sizingSlip?->width_multiplier ?? 1), 3, '.', '') }}"
                                                 class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-700 text-zinc-50 text-[11px] font-bold transition-colors whitespace-nowrap">
                                             {{ $bm->assigned_loom_no ? 'Change Loom' : 'Mount on Loom' }}
                                         </button>
@@ -318,7 +405,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="px-4 py-10 text-center text-zinc-400">No beams generated yet. Create a Sizing Slip to generate beams.</td></tr>
+                        <tr><td colspan="11" class="px-4 py-10 text-center text-zinc-400">No beams generated yet. Create a Sizing Slip to generate beams.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -328,8 +415,8 @@
             @if($beamRecord->sizingSlip)
                 @php
                     $slipDetails = $beamRecord->sizingSlip;
-                    $expectedSlipMeters = (float) $slipDetails->total_length_meters;
-                    $expectedPerBeamMeters = $slipDetails->total_beams > 0 ? $expectedSlipMeters / $slipDetails->total_beams : 0;
+                    $expectedSlipMeters = $slipDetails->expectedFabricMeters();
+                    $expectedPerBeamMeters = $slipDetails->expectedFabricMetersPerBeam();
                 @endphp
                 <div id="modalBeamDetails{{ $beamRecord->id }}" class="fixed inset-0 z-[60] hidden items-center justify-center overflow-y-auto bg-zinc-950/60 p-4 backdrop-blur-sm">
                     <div class="my-auto w-full max-w-3xl rounded-3xl border border-zinc-200 bg-white p-5 shadow-2xl sm:p-6">
@@ -345,32 +432,56 @@
                         <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                             <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Beams from slip</span><strong class="mt-1 block font-mono text-lg text-zinc-900">{{ $slipDetails->total_beams }}</strong></div>
                             <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Yarn quality</span><strong class="mt-1 block text-sm text-zinc-900">{{ $slipDetails->yarn_quality }}</strong></div>
-                            <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Expected total</span><strong class="mt-1 block font-mono text-lg text-zinc-900">{{ number_format($expectedSlipMeters, 2) }}m</strong></div>
-                            <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Expected / beam</span><strong class="mt-1 block font-mono text-lg text-zinc-900">{{ number_format($expectedPerBeamMeters, 2) }}m</strong></div>
+                            <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Expected cloth total</span><strong class="mt-1 block font-mono text-lg text-zinc-900">{{ number_format($expectedSlipMeters, 2) }}m</strong></div>
+                            <div class="rounded-xl bg-zinc-50 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Expected cloth / beam</span><strong class="mt-1 block font-mono text-lg text-zinc-900">{{ number_format($expectedPerBeamMeters, 2) }}m</strong></div>
                         </div>
 
                         <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Set length</span><strong class="mt-1 block text-sm text-zinc-800">{{ number_format($slipDetails->set_length_value ?? $expectedSlipMeters, 2) }} {{ $slipDetails->set_length_unit === 'gaz' ? 'gaz' : 'meters' }}</strong></div>
+                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Set length / width factor</span><strong class="mt-1 block text-sm text-zinc-800">{{ number_format($slipDetails->set_length_value ?? $slipDetails->total_length_meters, 2) }} {{ $slipDetails->set_length_unit === 'gaz' ? 'gaz' : 'meters' }} × {{ number_format($slipDetails->width_multiplier, 2) }}</strong></div>
+                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Raw / finished beams</span><strong class="mt-1 block text-sm text-zinc-800">{{ $slipDetails->back_beam_count ?? '—' }} / {{ $slipDetails->total_beams }}</strong></div>
                             <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Bags allocated / used</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ $slipDetails->bags_allocated }} / {{ $slipDetails->bags_used }}</strong></div>
                             <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Returned / held</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ $slipDetails->bags_returned_to_factory }} / {{ $slipDetails->bags_held_with_sizing }}</strong></div>
                             <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Ends / Taarein</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ $slipDetails->total_ends ? number_format($slipDetails->total_ends) : 'Not recorded' }}</strong></div>
                         </div>
 
+                        @php
+                            $slipBagVariance = $slipDetails->bags_allocated - $slipDetails->bags_used - $slipDetails->bags_returned_to_factory - $slipDetails->bags_held_with_sizing;
+                        @endphp
+                        <p class="mt-3 text-xs {{ $slipBagVariance === 0 ? 'text-emerald-700' : 'text-amber-800' }}">
+                            Bag reconciliation: {{ $slipDetails->bags_allocated }} sent − {{ $slipDetails->bags_used }} used − {{ $slipDetails->bags_returned_to_factory }} returned − {{ $slipDetails->bags_held_with_sizing }} held =
+                            <strong>{{ $slipBagVariance === 0 ? 'balanced' : ($slipBagVariance > 0 ? $slipBagVariance.' bag(s) unaccounted' : abs($slipBagVariance).' bag(s) over-reported') }}</strong>.
+                            This flags a discrepancy for review; it does not establish its cause.
+                        </p>
+
                         @if($slipDetails->sizing_weight_pounds !== null)
-                            <p class="mt-3 text-xs text-zinc-500">Sizing weight: <strong class="text-zinc-800">{{ number_format($slipDetails->sizing_weight_pounds * 0.45359237, 2) }} kg</strong> ({{ number_format($slipDetails->sizing_weight_pounds, 2) }} lb)</p>
+                            <p class="mt-3 text-xs text-zinc-500">Net yarn bill weight: <strong class="text-zinc-800">{{ number_format($slipDetails->sizing_weight_pounds * 0.45359237, 2) }} kg</strong> ({{ number_format($slipDetails->sizing_weight_pounds, 2) }} lb).
+                                @if($slipDetails->sizing_gross_weight_pounds !== null)
+                                    Gross bill weight: <strong class="text-zinc-800">{{ number_format($slipDetails->sizing_gross_weight_pounds * 0.45359237, 2) }} kg</strong>.
+                                    @if($slipDetails->sizing_weight_pounds !== null)
+                                        Gross-to-net difference: <strong class="text-zinc-800">{{ number_format(($slipDetails->sizing_gross_weight_pounds - $slipDetails->sizing_weight_pounds) * 0.45359237, 2) }} kg</strong>.
+                                    @endif
+                                @endif
+                                @if($slipDetails->estimatedWarpCountNe() !== null)
+                                    Estimated warp count: <strong class="text-zinc-800">{{ number_format($slipDetails->estimatedWarpCountNe(), 2) }} Ne</strong>
+                                    @if($slipDetails->declaredYarnCountNe() !== null)
+                                        vs declared {{ number_format($slipDetails->declaredYarnCountNe(), 2) }} Ne.
+                                    @endif
+                                @endif
+                            </p>
+                            <p class="mt-1 text-[10px] text-zinc-400">Count is a reconciliation estimate from total ends, unmultiplied set length, and net bill weight. It cannot by itself establish fraud or replace a yarn test.</p>
                         @endif
 
                         <div class="mt-5 overflow-hidden rounded-2xl border border-zinc-200">
                             <div class="bg-zinc-50 px-4 py-3 text-xs font-extrabold text-zinc-800">All beams created from this slip</div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left text-xs">
-                                    <thead class="text-[10px] uppercase tracking-wider text-zinc-500"><tr class="border-t border-zinc-200"><th class="px-4 py-2.5">Beam</th><th class="px-4 py-2.5">Status / Loom</th><th class="px-4 py-2.5 text-right">Expected</th><th class="px-4 py-2.5 text-right">Woven</th><th class="px-4 py-2.5 text-right">Remaining</th></tr></thead>
+                                    <thead class="text-[10px] uppercase tracking-wider text-zinc-500"><tr class="border-t border-zinc-200"><th class="px-4 py-2.5">Beam</th><th class="px-4 py-2.5">Status / Loom</th><th class="px-4 py-2.5 text-right">Expected fabric</th><th class="px-4 py-2.5 text-right">Woven</th><th class="px-4 py-2.5 text-right">Warp remaining</th></tr></thead>
                                     <tbody class="divide-y divide-zinc-100">
                                         @foreach($slipDetails->beams as $slipBeam)
                                             <tr>
                                                 <td class="px-4 py-2.5 font-mono font-bold text-zinc-900">{{ $slipBeam->beam_no }}</td>
                                                 <td class="px-4 py-2.5 text-zinc-600">{{ str_replace('_', ' ', ucfirst($slipBeam->status)) }}{{ $slipBeam->assigned_loom_no ? ' · '.$slipBeam->assigned_loom_no : '' }}</td>
-                                                <td class="px-4 py-2.5 text-right font-mono text-zinc-700">{{ number_format($slipBeam->total_length_meters, 2) }}m</td>
+                                                <td class="px-4 py-2.5 text-right font-mono text-zinc-700">{{ number_format((float) $slipBeam->total_length_meters * (float) $slipDetails->width_multiplier, 2) }}m</td>
                                                 <td class="px-4 py-2.5 text-right font-mono text-zinc-700">{{ number_format($slipBeam->productions_sum_net_meters_produced ?? 0, 2) }}m</td>
                                                 <td class="px-4 py-2.5 text-right font-mono text-zinc-700">{{ number_format($slipBeam->remaining_length_meters, 2) }}m</td>
                                             </tr>
@@ -432,11 +543,15 @@
                         <th class="px-4 py-3 text-center bg-zinc-900/5 text-zinc-700 border-x border-zinc-200">Used in Beams</th>
                         <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-r border-zinc-200">Returned to Factory</th>
                         <th class="px-4 py-3 text-center bg-zinc-100/70 text-zinc-600 border-r border-zinc-200">Held With Sizing</th>
-                        <th class="px-4 py-3 text-center">Beams Created</th>
-                        <th class="px-4 py-3 text-right">Expected Production</th>
-                        <th class="px-4 py-3 text-right">Expected per Beam</th>
+                        <th class="px-4 py-3 text-center">Bag Check</th>
+                        <th class="px-4 py-3 text-center">Back / Full Beams</th>
+                        <th class="px-4 py-3 text-right">Expected Cloth</th>
+                        <th class="px-4 py-3 text-right">Expected / Full Beam</th>
+                        <th class="px-4 py-3 text-right">Actually Woven</th>
+                        <th class="px-4 py-3 text-right">Short / Over</th>
                         <th class="px-4 py-3 text-right">Ends / Taarein</th>
-                        <th class="px-4 py-3 text-right">Sizing Weight</th>
+                        <th class="px-4 py-3 text-right">Net Yarn Weight</th>
+                        <th class="px-4 py-3 text-right">Estimated Count</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-100">
@@ -450,29 +565,49 @@
                             <td class="px-4 py-3 text-center font-black text-zinc-900 bg-zinc-50 border-x border-zinc-200 font-mono">{{ $s->bags_used }}</td>
                             <td class="px-4 py-3 text-center font-bold text-zinc-600 bg-zinc-50 border-r border-zinc-200 font-mono">{{ $s->bags_returned_to_factory }}</td>
                             <td class="px-4 py-3 text-center font-bold text-zinc-600 bg-zinc-50 border-r border-zinc-200 font-mono">{{ $s->bags_held_with_sizing }}</td>
+                            @php
+                                $bagVariance = $s->bags_allocated - $s->bags_used - $s->bags_returned_to_factory - $s->bags_held_with_sizing;
+                            @endphp
                             <td class="px-4 py-3 text-center">
-                                <span class="font-bold text-zinc-900">{{ $s->total_beams }}</span>
-                                <span class="text-zinc-400 text-[11px]"> beams</span>
+                                @if($bagVariance === 0)
+                                    <span class="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">Balanced</span>
+                                @elseif($bagVariance > 0)
+                                    <span class="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">{{ $bagVariance }} unaccounted</span>
+                                @else
+                                    <span class="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700">{{ abs($bagVariance) }} over-reported</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="font-bold text-zinc-900">{{ $s->back_beam_count ?? '—' }} / {{ $s->total_beams }}</span>
+                                <span class="block text-zinc-400 text-[10px]">back / full</span>
                             </td>
                             @php
-                                $expectedTotalMeters = (float) $s->total_length_meters;
-                                $expectedMetersPerBeam = $s->total_beams > 0 ? $expectedTotalMeters / $s->total_beams : 0;
+                                $expectedTotalMeters = $s->expectedFabricMeters();
+                                $expectedMetersPerBeam = $s->expectedFabricMetersPerBeam();
                                 $actualSlipProduction = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
+                                $shortageMeters = $expectedTotalMeters - $actualSlipProduction;
+                                $allSlipBeamsFinished = $s->beams->isNotEmpty() && $s->beams->every(fn ($beam) => $beam->status === 'exhausted');
+                                $estimatedWarpCount = $s->estimatedWarpCountNe();
                             @endphp
                             <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">
                                 {{ number_format($expectedTotalMeters, 2) }}m
-                                <span class="block text-[10px] font-normal text-zinc-400">from {{ number_format($s->set_length_value ?? $s->total_length_meters, 2) }} {{ $s->set_length_unit === 'gaz' ? 'gaz' : 'm' }}</span>
-                                <span class="block text-[10px] font-normal text-zinc-500">{{ number_format($actualSlipProduction, 2) }}m woven so far</span>
+                                <span class="block text-[10px] font-normal text-zinc-400">{{ number_format($s->total_length_meters, 2) }}m × {{ number_format($s->width_multiplier, 2) }}</span>
                             </td>
                             <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">
                                 {{ number_format($expectedMetersPerBeam, 2) }}m
-                                <span class="block text-[10px] font-normal text-zinc-400">per beam</span>
+                                <span class="block text-[10px] font-normal text-zinc-400">per full beam</span>
+                            </td>
+                            <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">{{ number_format($actualSlipProduction, 2) }}m</td>
+                            <td class="px-4 py-3 text-right font-mono {{ $shortageMeters >= 0 ? 'text-amber-700' : 'text-emerald-700' }}">
+                                {{ number_format(abs($shortageMeters), 2) }}m {{ $shortageMeters >= 0 ? 'short' : 'over' }}
+                                <span class="block text-[10px]">{{ $allSlipBeamsFinished ? 'final' : 'provisional' }}</span>
                             </td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->total_ends ? number_format($s->total_ends) : '—' }}</td>
-                            <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->sizing_weight_pounds !== null ? number_format($s->sizing_weight_pounds * 0.45359237, 2).' kg / '.number_format($s->sizing_weight_pounds, 2).' lb' : '—' }}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->sizing_weight_pounds !== null ? number_format($s->sizing_weight_pounds * 0.45359237, 2).' kg net' : '—' }}{{ $s->sizing_gross_weight_pounds !== null ? ' / '.number_format($s->sizing_gross_weight_pounds * 0.45359237, 2).' kg gross' : '' }}</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $estimatedWarpCount !== null ? number_format($estimatedWarpCount, 2).' Ne' : '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="13" class="px-4 py-10 text-center text-zinc-400">No sizing slips found. Click "+ New Sizing Slip Entry" to create one.</td></tr>
+                        <tr><td colspan="17" class="px-4 py-10 text-center text-zinc-400">No sizing slips found. Click "+ New Sizing Slip Entry" to create one.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -505,7 +640,7 @@
                 </span>
                 <div>
                     <h3 class="text-base font-extrabold text-zinc-900">New Sizing Slip Entry</h3>
-                    <p class="text-xs text-zinc-400">Creates ready beams & tracks bag usage vs returns</p>
+                    <p class="text-xs text-zinc-400">Record the gate pass, bill weights, bag returns, and each finished beam</p>
                 </div>
             </div>
             <button type="button" onclick="closeModal('modalNewSizingSlip')"
@@ -558,7 +693,7 @@
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Yarn Quality *</label>
                         <div class="flex gap-2">
-                            <select id="inpYarnQuality" name="yarn_quality" required data-yarn-quality-select
+                            <select id="inpYarnQuality" name="yarn_quality" required data-yarn-quality-select onchange="updateSizingCountPreview()"
                                     class="min-w-0 flex-1 bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                                 <option value="">Select yarn quality</option>
                                 @foreach($yarnQualities as $yarnQuality)
@@ -576,7 +711,7 @@
                 <div class="flex items-center justify-between px-4 py-3 border-b border-zinc-200 bg-zinc-100">
                     <div class="flex items-center gap-2">
                         <span class="text-xs font-bold uppercase tracking-wider text-zinc-700">⚖️ Bags Reconciliation</span>
-                        <span class="text-[10px] text-zinc-400">Used + Returned + Held must equal Allocated</span>
+                        <span class="text-[10px] text-zinc-400">Compare bags sent with used, returned, and held</span>
                     </div>
                     <span id="sizingBagStatus" class="text-xs font-bold font-mono text-zinc-500">—</span>
                 </div>
@@ -596,7 +731,7 @@
                                    class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         </div>
                         <div class="rounded-xl border border-zinc-200 bg-white p-3">
-                            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Returned to Mill</label>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Returned to Factory</label>
                             <input type="number" id="inpBagsReturned" name="bags_returned_to_factory"
                                    value="0" min="0" oninput="calculateSizingBags()"
                                    class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
@@ -608,6 +743,7 @@
                                    class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         </div>
                     </div>
+                    <p class="text-[10px] leading-4 text-zinc-500">If counts do not match, save the slip and it will be flagged for review. A mismatch is a record discrepancy, not proof of theft.</p>
                     {{-- Balance indicator bar --}}
                     <div id="bagBalanceBar" class="h-1.5 rounded-full bg-zinc-200 overflow-hidden">
                         <div id="bagBalanceFill" class="h-full rounded-full bg-zinc-300 transition-all duration-300" style="width:0%"></div>
@@ -618,32 +754,47 @@
             {{-- ── Section 3: Beam & Length Info ── --}}
             <div>
                 <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Beam & Warp Length</div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Beams Produced *</label>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Raw / Back Beams Received</label>
+                        <input type="number" name="back_beam_count" min="1" max="1000"
+                               placeholder="e.g. 5"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Finished Full Beams Made *</label>
                         <input type="number" id="inpTotalBeams" name="total_beams" required min="1" max="100"
                                placeholder="e.g. 4" oninput="calculateBeamLengthSplit()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Set Length (Gate Pass) *</label>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Set Warp Length (Gate Pass) *</label>
                         <div class="flex gap-2">
                             <input type="number" step="0.01" id="inpSetLength" name="set_length_value"
-                                   required min="0.01" placeholder="e.g. 18481" oninput="calculateBeamLengthSplit()"
+                                   required min="0.01" placeholder="e.g. 18481" oninput="calculateBeamLengthSplit(); updateSizingCountPreview()"
                                    class="min-w-0 flex-1 bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                            <select id="selectSetLengthUnit" name="set_length_unit" onchange="calculateBeamLengthSplit()"
+                            <select id="selectSetLengthUnit" name="set_length_unit" onchange="calculateBeamLengthSplit(); updateSizingCountPreview()"
                                     class="w-24 bg-zinc-50 border border-zinc-300 rounded-xl px-2 py-2 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                                 <option value="meters">Meters</option>
                                 <option value="gaz">Gaz/yds</option>
                             </select>
                         </div>
                     </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Fabric Panna *</label>
+                        <select id="inpWidthMultiplier" name="width_multiplier" required onchange="calculateBeamLengthSplit()"
+                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                            <option value="1" selected>Single panna · factor 1</option>
+                            <option value="2">Double panna · factor 2</option>
+                        </select>
+                        <span class="mt-1 block text-[10px] text-zinc-400">Choose the actual fabric width arrangement on this set.</span>
+                    </div>
                 </div>
 
                 {{-- Live beam length result --}}
             <div class="mt-3 flex items-center justify-between rounded-xl bg-zinc-900 px-4 py-3">
-                    <span class="text-xs text-zinc-400">Expected production:</span>
-                    <strong id="displayPerBeamLength" class="font-mono text-sm text-zinc-50">Enter set length and beam count</strong>
+                    <span class="text-xs text-zinc-400">Expected fabric production:</span>
+                    <strong id="displayPerBeamLength" class="font-mono text-sm text-zinc-50">Enter set length, width factor, and full beams</strong>
                 </div>
             </div>
 
@@ -653,32 +804,41 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Ends / Taarein</label>
-                        <input type="number" name="total_ends" min="1" placeholder="e.g. 11550"
+                        <input type="number" id="inpTotalEnds" name="total_ends" min="1" placeholder="e.g. 10080" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         <span class="mt-1 block text-[10px] text-zinc-400">Or leave blank and use Reed × Width</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="block text-xs font-semibold text-zinc-600 mb-1">Reed</label>
-                            <input type="number" name="reed_count" min="1" placeholder="—"
+                            <input type="number" id="inpReedCount" name="reed_count" min="1" placeholder="—" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
                                    class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-zinc-600 mb-1">Width (in)</label>
-                            <input type="number" step="0.01" name="fabric_width_inches" min="0.01" placeholder="—"
+                            <input type="number" step="0.01" id="inpFabricWidth" name="fabric_width_inches" min="0.01" placeholder="—" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
                                    class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Extra Selvedge Ends</label>
-                        <input type="number" name="selvedge_ends" min="0" value="0"
+                        <input type="number" id="inpSelvedgeEnds" name="selvedge_ends" min="0" value="0" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Sizing Bill Weight (kg)</label>
-                        <input type="number" step="0.01" id="inpSizingWeightKg" name="sizing_weight_kg" min="0" placeholder="—" oninput="updateSizingWeightPreview()"
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Gross Weight on Sizing Bill (kg)</label>
+                        <input type="number" step="0.01" id="inpSizingGrossWeightKg" name="sizing_gross_weight_kg" min="0.01" placeholder="e.g. 2550" oninput="updateSizingWeightPreview()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                        <span id="sizingWeightPoundsPreview" class="mt-1 block text-[10px] text-zinc-500">Stored internally in pounds.</span>
+                        <span id="sizingGrossWeightPoundsPreview" class="mt-1 block text-[10px] text-zinc-500">Bill gross weight, if listed.</span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Net Warp Yarn Weight on Bill (kg)</label>
+                        <input type="number" step="0.01" id="inpSizingWeightKg" name="sizing_weight_kg" min="0.01" placeholder="e.g. 2266" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
+                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <span id="sizingWeightPoundsPreview" class="mt-1 block text-[10px] text-zinc-500">Enter the net yarn weight, excluding bags and cones.</span>
+                        <span id="sizingGrossNetDifferencePreview" class="mt-1 block text-[10px] font-semibold text-zinc-600">Gross-to-net difference appears when both bill weights are entered.</span>
+                        <span id="sizingCountPreview" class="mt-1 block text-[10px] font-semibold text-zinc-700">Warp count estimate needs ends, set length, and net weight.</span>
+                        <span class="mt-1 block text-[10px] text-zinc-400">Count estimate = ends × set length in metres ÷ (1693.6 × net kg). It is a reconciliation check, not a lab test.</span>
                     </div>
                 </div>
             </div>
@@ -692,7 +852,7 @@
 
             {{-- Footer actions --}}
             <div class="pt-3 border-t border-zinc-100 flex items-center justify-between gap-3">
-                <p class="text-[11px] text-zinc-400">Bags must balance before submitting</p>
+                <p class="text-[11px] text-zinc-400">Bag mismatches save with a review flag</p>
                 <div class="flex items-center gap-3">
                     <button type="button" onclick="closeModal('modalNewSizingSlip')"
                             class="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-semibold transition-colors">
@@ -727,6 +887,9 @@
                 <label class="block text-xs font-semibold text-zinc-600 mb-1">Beam Selected</label>
                 <input type="text" id="mountBeamName" readonly class="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-sm font-mono font-bold text-zinc-900">
             </div>
+            <div id="mountBeamDetails" class="whitespace-pre-line rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs leading-5 text-zinc-600">
+                Select a beam to see its yarn quality and remaining length.
+            </div>
             <div>
                 <label class="block text-xs font-semibold text-zinc-600 mb-1">Assign to Loom # *</label>
                 <select name="assigned_loom_no" id="selectMountLoom" required class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
@@ -753,14 +916,6 @@
         const bagTransaction = document.getElementById('inpBagTransactionId');
         bagTransaction.value = button.dataset.id || '';
         populateBagTransaction(bagTransaction);
-        const quantity = parseInt(button.dataset.quantity) || 0;
-        document.getElementById('inpBagsAllocated').value = quantity;
-        document.getElementById('inpBagsUsed').value = quantity;
-        document.getElementById('inpBagsReturned').value = 0;
-        document.getElementById('inpBagsHeld').value = 0;
-        document.getElementById('inpSizingWeightKg').value = (quantity * 100 * 0.45359237).toFixed(2);
-        updateSizingWeightPreview();
-        calculateSizingBags();
         openModal('modalNewSizingSlip');
     }
 
@@ -777,69 +932,105 @@
         document.getElementById('inpBagsUsed').value = quantity;
         document.getElementById('inpBagsReturned').value = 0;
         document.getElementById('inpBagsHeld').value = 0;
-        document.getElementById('inpSizingWeightKg').value = (quantity * 100 * 0.45359237).toFixed(2);
+        document.getElementById('inpSizingGrossWeightKg').value = '';
+        document.getElementById('inpSizingWeightKg').value = '';
         updateSizingWeightPreview();
+        updateSizingCountPreview();
         calculateSizingBags();
     }
 
     function updateSizingWeightPreview() {
         const allocated = parseFloat(document.getElementById('inpBagsAllocated').value) || 0;
-        const enteredKilograms = parseFloat(document.getElementById('inpSizingWeightKg').value) || 0;
-        document.getElementById('sizingBagWeightPreview').innerText = `100 lb per bag · ${(allocated * 100 * 0.45359237).toFixed(2)} kg total`;
-        document.getElementById('sizingWeightPoundsPreview').innerText = `${enteredKilograms.toFixed(2)} kg = ${(enteredKilograms / 0.45359237).toFixed(2)} lb · stored in pounds`;
+        const grossKilograms = parseFloat(document.getElementById('inpSizingGrossWeightKg').value) || 0;
+        const netKilograms = parseFloat(document.getElementById('inpSizingWeightKg').value) || 0;
+        document.getElementById('sizingBagWeightPreview').innerText = `100 lb per bag · ${(allocated * 100 * 0.45359237).toFixed(2)} kg nominal total`;
+        document.getElementById('sizingGrossWeightPoundsPreview').innerText = grossKilograms > 0 ? `${grossKilograms.toFixed(2)} kg = ${(grossKilograms / 0.45359237).toFixed(2)} lb stored` : 'Bill gross weight, if listed.';
+        document.getElementById('sizingWeightPoundsPreview').innerText = netKilograms > 0 ? `${netKilograms.toFixed(2)} kg = ${(netKilograms / 0.45359237).toFixed(2)} lb stored` : 'Enter the net yarn weight after bill deductions.';
+        const difference = grossKilograms - netKilograms;
+        document.getElementById('sizingGrossNetDifferencePreview').innerText = grossKilograms > 0 && netKilograms > 0
+            ? `Gross-to-net difference: ${difference.toFixed(2)} kg (${(difference / 0.45359237).toFixed(2)} lb).`
+            : 'Gross-to-net difference appears when both bill weights are entered.';
     }
 
     function calculateSizingBags() {
-        const allocated = parseFloat(document.getElementById('inpBagsAllocated').value) || 0;
-        const used = parseFloat(document.getElementById('inpBagsUsed').value) || 0;
-        const returned = parseFloat(document.getElementById('inpBagsReturned').value) || 0;
-        const held = parseFloat(document.getElementById('inpBagsHeld').value) || 0;
-        const sum = used + returned + held;
-        const statusEl = document.getElementById('sizingBagStatus');
-        const submitBtn = document.getElementById('btnSubmitSizingSlip');
+        const allocated = parseInt(document.getElementById('inpBagsAllocated').value) || 0;
+        const used = parseInt(document.getElementById('inpBagsUsed').value) || 0;
+        const returned = parseInt(document.getElementById('inpBagsReturned').value) || 0;
+        const held = parseInt(document.getElementById('inpBagsHeld').value) || 0;
+        const variance = allocated - used - returned - held;
+        const status = document.getElementById('sizingBagStatus');
+        const button = document.getElementById('btnSubmitSizingSlip');
         const fill = document.getElementById('bagBalanceFill');
+        const accounted = used + returned + held;
+        fill.style.width = `${allocated > 0 ? Math.min(100, Math.round(accounted / allocated * 100)) : 0}%`;
 
-        // update progress bar
-        const pct = allocated > 0 ? Math.min(100, Math.round((sum / allocated) * 100)) : 0;
-        fill.style.width = pct + '%';
-
-        if (sum === allocated && allocated > 0) {
-            statusEl.innerText = `✓ Balanced: ${used}+${returned}+${held} = ${allocated}`;
-            statusEl.className = 'text-xs font-bold font-mono text-zinc-700';
-            fill.className = 'h-full rounded-full bg-zinc-800 transition-all duration-300';
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        } else if (sum > allocated && allocated > 0) {
-            statusEl.innerText = `✗ Over by ${sum - allocated} bags`;
-            statusEl.className = 'text-xs font-bold font-mono text-zinc-500';
-            fill.className = 'h-full rounded-full bg-zinc-400 transition-all duration-300';
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        } else {
-            const remaining = allocated - sum;
-            statusEl.innerText = allocated > 0 ? `${remaining} bags unaccounted` : '—';
-            statusEl.className = 'text-xs font-bold font-mono text-zinc-400';
+        if (allocated <= 0) {
+            status.innerText = 'Select a bag receipt';
+            status.className = 'text-xs font-bold font-mono text-zinc-400';
             fill.className = 'h-full rounded-full bg-zinc-300 transition-all duration-300';
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else if (variance === 0) {
+            status.innerText = `Balanced: ${used} used + ${returned} returned + ${held} held = ${allocated}`;
+            status.className = 'text-xs font-bold font-mono text-emerald-700';
+            fill.className = 'h-full rounded-full bg-emerald-600 transition-all duration-300';
+        } else if (variance > 0) {
+            status.innerText = `${variance} bag(s) not accounted for`;
+            status.className = 'text-xs font-bold font-mono text-amber-700';
+            fill.className = 'h-full rounded-full bg-amber-500 transition-all duration-300';
+        } else {
+            status.innerText = `${Math.abs(variance)} bag(s) over-reported`;
+            status.className = 'text-xs font-bold font-mono text-red-700';
+            fill.className = 'h-full rounded-full bg-red-500 transition-all duration-300';
         }
+
+        button.disabled = allocated <= 0;
+        button.classList.toggle('opacity-50', allocated <= 0);
+        button.classList.toggle('cursor-not-allowed', allocated <= 0);
     }
 
     function calculateBeamLengthSplit() {
-        const beams = parseInt(document.getElementById('inpTotalBeams').value) || 1;
+        const beams = parseInt(document.getElementById('inpTotalBeams').value) || 0;
         const setLength = parseFloat(document.getElementById('inpSetLength').value) || 0;
         const unit = document.getElementById('selectSetLengthUnit').value;
-        const totalLen = setLength * (unit === 'gaz' ? 0.9144 : 1);
-        if (beams > 0 && totalLen > 0) {
-            document.getElementById('displayPerBeamLength').innerText = `${totalLen.toFixed(2)}m total · ${(totalLen/beams).toFixed(2)}m expected per beam`;
+        const warpLengthMeters = setLength * (unit === 'gaz' ? 0.9144 : 1);
+        const widthMultiplier = parseFloat(document.getElementById('inpWidthMultiplier').value) || 1;
+        if (beams > 0 && warpLengthMeters > 0) {
+            document.getElementById('displayPerBeamLength').innerText = `${(warpLengthMeters * widthMultiplier).toFixed(2)}m expected fabric total · ${(warpLengthMeters / beams).toFixed(2)}m warp per beam · ${(warpLengthMeters * widthMultiplier / beams).toFixed(2)}m expected fabric per beam`;
         } else {
-            document.getElementById('displayPerBeamLength').innerText = 'Enter set length';
+            document.getElementById('displayPerBeamLength').innerText = 'Enter set length and full beam count';
         }
+        updateSizingCountPreview();
     }
 
-    function openMountModal(beamId, beamNo, currentLoom) {
+    function updateSizingCountPreview() {
+        const endsInput = parseFloat(document.getElementById('inpTotalEnds').value) || 0;
+        const reed = parseFloat(document.getElementById('inpReedCount').value) || 0;
+        const width = parseFloat(document.getElementById('inpFabricWidth').value) || 0;
+        const selvedge = parseFloat(document.getElementById('inpSelvedgeEnds').value) || 0;
+        const ends = endsInput || (reed > 0 && width > 0 ? Math.round(reed * width) + selvedge : 0);
+        const length = parseFloat(document.getElementById('inpSetLength').value) || 0;
+        const lengthMeters = length * (document.getElementById('selectSetLengthUnit').value === 'gaz' ? 0.9144 : 1);
+        const weightKg = parseFloat(document.getElementById('inpSizingWeightKg').value) || 0;
+        const preview = document.getElementById('sizingCountPreview');
+        if (!ends || !lengthMeters || !weightKg) {
+            preview.innerText = 'Warp count estimate needs ends, set length, and net weight.';
+            return;
+        }
+        const estimatedCount = (ends * lengthMeters) / (1693.6 * weightKg);
+        const quality = document.getElementById('inpYarnQuality').value;
+        const declared = quality.match(/\d+(?:\.\d+)?/);
+        const comparison = declared ? ` · declared ${declared[0]} Ne · difference ${(estimatedCount - parseFloat(declared[0])).toFixed(2)} Ne` : '';
+        preview.innerText = `Estimated warp count: ${estimatedCount.toFixed(2)} Ne${comparison}. Reconciliation estimate only; verify with a lab test.`;
+    }
+
+    function openMountModal(button) {
+        const beamId = button.dataset.id;
+        const beamNo = button.dataset.beamNo;
+        const currentLoom = button.dataset.loom;
+        const remainingMeters = parseFloat(button.dataset.remainingMeters) || 0;
+        const widthMultiplier = parseFloat(button.dataset.widthFactor) || 1;
         document.getElementById('formMountBeam').action = `/sizing/beams/${beamId}/assign`;
         document.getElementById('mountBeamName').value = beamNo;
+        document.getElementById('mountBeamDetails').textContent = `${button.dataset.quality}\n${parseFloat(button.dataset.warpMeters).toFixed(2)}m warp supplied · ${remainingMeters.toFixed(2)}m warp remaining\n${(remainingMeters * widthMultiplier).toFixed(2)}m expected fabric at factor ${widthMultiplier}`;
         if (currentLoom) document.getElementById('selectMountLoom').value = currentLoom;
         openModal('modalMountBeam');
     }

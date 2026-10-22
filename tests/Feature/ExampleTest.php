@@ -57,27 +57,27 @@ class ExampleTest extends TestCase
         // Sizing Module
         $response = $this->get('/sizing');
         $response->assertStatus(200);
-        $response->assertSeeText('Sizing Slips & Beams Tracking');
+        $response->assertSeeText('Sizing Dashboard');
 
         // Parts Module
         $response = $this->get('/parts');
         $response->assertStatus(200);
-        $response->assertSeeText('Loom Parts Store & Factory Issuance');
+        $response->assertSeeText('Loom Parts Store & Issuance');
 
         // Fabric Stock Module
         $response = $this->get('/fabric-stock');
         $response->assertStatus(200);
-        $response->assertSeeText('Fabric Stock Store');
+        $response->assertSeeText('Fabric Stock Dashboard');
 
         // Sales Module
         $response = $this->get('/sales');
         $response->assertStatus(200);
-        $response->assertSeeText('Sales & Contract Management');
+        $response->assertSeeText('Sales Dashboard');
 
         // Production Module
         $response = $this->get('/production');
         $response->assertStatus(200);
-        $response->assertSeeText('Production & Leakage Loss Calculation');
+        $response->assertSeeText('Production Dashboard');
 
         // Ledgers Module
         $response = $this->get('/ledgers');

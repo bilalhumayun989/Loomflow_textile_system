@@ -6,7 +6,9 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -26,11 +28,19 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
+        try {
+            if (Auth::attempt($credentials, $request->boolean('remember'))) {
+                $request->session()->regenerate();
 
-            return redirect()->intended(route('dashboard'))
-                ->with('success', 'Welcome back, '.Auth::user()->name.'!');
+                return redirect()->intended(route('dashboard'))
+                    ->with('success', 'Welcome back, '.Auth::user()->name.'!');
+            }
+        } catch (Throwable $exception) {
+            Log::error('Sign-in failed because of a server error.', [
+                'exception' => $exception,
+            ]);
+
+            return back()->withInput($request->only('email'))->with('error', 'Sign-in is temporarily unavailable because of a server problem. Please try again.');
         }
 
         return back()->withErrors([

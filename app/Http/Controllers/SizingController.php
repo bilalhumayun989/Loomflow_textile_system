@@ -50,6 +50,20 @@ class SizingController extends Controller
         );
     }
 
+    public function balance(): View
+    {
+        return $this->renderPage(
+            'balance',
+            SizingSlip::with(['beams' => fn ($query) => $query
+                ->withSum('productions', 'net_meters_produced')
+                ->withSum('productions', 'expected_fabric_meters')
+                ->withSum('productions', 'leakage_waste_meters')
+                ->withSum('productions', 'beam_meters_consumed')])
+                ->latest('slip_date')->latest('id')->paginate(10),
+            collect()
+        );
+    }
+
     /**
      * @param  Collection<int, SizingSlip>|LengthAwarePaginator  $slips
      * @param  Collection<int, SizingBeam>|LengthAwarePaginator  $beams
@@ -117,13 +131,16 @@ class SizingController extends Controller
             'bags_returned_to_factory' => 'required|integer|min:0',
             'bags_held_with_sizing' => 'required|integer|min:0',
             'total_beams' => 'required|integer|min:1|max:100',
+            'back_beam_count' => 'nullable|integer|min:1|max:1000',
+            'width_multiplier' => 'required|numeric|min:0.01|max:100',
             'set_length_value' => 'required|numeric|min:0.01',
             'set_length_unit' => 'required|in:meters,gaz',
             'total_ends' => 'nullable|integer|min:1',
             'reed_count' => 'nullable|integer|min:1',
             'fabric_width_inches' => 'nullable|numeric|min:0.01',
             'selvedge_ends' => 'nullable|integer|min:0',
-            'sizing_weight_kg' => 'nullable|numeric|min:0',
+            'sizing_gross_weight_kg' => 'nullable|numeric|min:0.01',
+            'sizing_weight_kg' => 'nullable|numeric|min:0.01',
             'bag_transaction_id' => 'required|integer|exists:bag_transactions,id',
             'slip_date' => 'required|date',
             'notes' => 'nullable|string',
@@ -132,6 +149,13 @@ class SizingController extends Controller
         if (empty($validated['total_ends']) && (empty($validated['reed_count']) || empty($validated['fabric_width_inches']))) {
             return back()->withInput()->withErrors([
                 'total_ends' => 'Enter gate pass total ends, or provide both reed count and fabric width.',
+            ]);
+        }
+
+        if (isset($validated['sizing_gross_weight_kg'], $validated['sizing_weight_kg'])
+            && $validated['sizing_weight_kg'] > $validated['sizing_gross_weight_kg']) {
+            return back()->withInput()->withErrors([
+                'sizing_weight_kg' => 'Net warp yarn weight cannot exceed the gross bill weight.',
             ]);
         }
 
@@ -150,11 +174,6 @@ class SizingController extends Controller
             $validated['yarn_quality'] = $sourceTransaction->quality;
             $validated['sizing_party'] = $sourceTransaction->destination ?: ($sourceTransaction->party_name ?: $sourceTransaction->source);
 
-            $accountedBags = $validated['bags_used'] + $validated['bags_returned_to_factory'] + $validated['bags_held_with_sizing'];
-            if ($accountedBags != $validated['bags_allocated']) {
-                return false;
-            }
-
             if (empty($validated['total_ends'])) {
                 $validated['total_ends'] = (int) round($validated['reed_count'] * $validated['fabric_width_inches'])
                     + (int) ($validated['selvedge_ends'] ?? 0);
@@ -165,10 +184,15 @@ class SizingController extends Controller
                 $validated['set_length_value'] * ($validated['set_length_unit'] === 'gaz' ? 0.9144 : 1),
                 2
             );
+            $validated['back_beam_count'] = $validated['back_beam_count'] ?? null;
             $validated['sizing_weight_pounds'] = isset($validated['sizing_weight_kg'])
                 ? round($validated['sizing_weight_kg'] / self::KILOGRAMS_PER_POUND, 2)
                 : null;
+            $validated['sizing_gross_weight_pounds'] = isset($validated['sizing_gross_weight_kg'])
+                ? round($validated['sizing_gross_weight_kg'] / self::KILOGRAMS_PER_POUND, 2)
+                : null;
             unset($validated['sizing_weight_kg']);
+            unset($validated['sizing_gross_weight_kg']);
 
             $slip = SizingSlip::create($validated);
             $beamCount = (int) $validated['total_beams'];
@@ -204,15 +228,20 @@ class SizingController extends Controller
         });
 
         if (! $slipResult) {
-            return back()->withInput()->with('error', 'This bag transaction is already linked, or its bag allocation does not balance.');
+            return back()->withInput()->with('error', 'This bag transaction is already linked or is not available for a sizing slip.');
         }
 
         $slip = $slipResult;
         $beamCount = (int) $slip->total_beams;
         $meterPerBeam = round($slip->total_length_meters / $beamCount, 2);
 
+        $bagVariance = $slip->bags_allocated - $slip->bags_used - $slip->bags_returned_to_factory - $slip->bags_held_with_sizing;
+        $bagNotice = $bagVariance > 0
+            ? " Bag check: {$bagVariance} bag(s) are unaccounted for."
+            : ($bagVariance < 0 ? ' Bag check: recorded used/returned/held bags exceed the amount sent.' : ' Bag check balanced.');
+
         return redirect()->route('sizing.index')
-            ->with('success', "Sizing Slip {$slip->slip_no} saved! Generated {$beamCount} Beams ({$meterPerBeam}m each) ready in store.");
+            ->with('success', "Sizing Slip {$slip->slip_no} saved! Generated {$beamCount} full beams ({$meterPerBeam}m warp length each), representing {$slip->expectedFabricMetersPerBeam()}m expected fabric per beam.".$bagNotice);
     }
 
     public function assignBeam(Request $request, SizingBeam $beam): RedirectResponse
@@ -221,6 +250,10 @@ class SizingController extends Controller
             'assigned_loom_no' => 'required|string|max:50',
             'mounted_date' => 'required|date',
         ]);
+
+        if (! in_array($beam->status, ['ready_in_store', 'mounted_on_loom'], true) || $beam->remaining_length_meters <= 0) {
+            return back()->with('error', 'This beam is exhausted or is not available to mount.');
+        }
 
         $beam->update([
             'assigned_loom_no' => $validated['assigned_loom_no'],

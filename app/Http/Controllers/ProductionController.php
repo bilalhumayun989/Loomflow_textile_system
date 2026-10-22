@@ -70,11 +70,12 @@ class ProductionController extends Controller
         $totalFabricProduced = Production::sum('net_meters_produced');
         $totalBeamConsumed = Production::sum('beam_meters_consumed');
         $totalLeakageMeters = Production::sum('leakage_waste_meters');
-        $overallLeakagePercentage = $totalBeamConsumed > 0 ? round(($totalLeakageMeters / $totalBeamConsumed) * 100, 2) : 0;
+        $totalExpectedFabricMeters = Production::sum('expected_fabric_meters');
+        $overallLeakagePercentage = $totalExpectedFabricMeters > 0 ? round(($totalLeakageMeters / $totalExpectedFabricMeters) * 100, 2) : 0;
         $avgEfficiency = round(Production::avg('efficiency_percentage') ?? 87.5, 1);
 
         // Loom-wise performance summary
-        $loomWiseStats = Production::selectRaw('loom_no, COUNT(*) as shift_count, SUM(net_meters_produced) as total_produced, SUM(beam_meters_consumed) as total_beam, SUM(leakage_waste_meters) as total_leakage, AVG(efficiency_percentage) as avg_eff')
+        $loomWiseStats = Production::selectRaw('loom_no, COUNT(*) as shift_count, SUM(net_meters_produced) as total_produced, SUM(beam_meters_consumed) as total_beam, SUM(expected_fabric_meters) as total_expected_fabric, SUM(leakage_waste_meters) as total_leakage, AVG(efficiency_percentage) as avg_eff')
             ->groupBy('loom_no')
             ->orderBy('loom_no')
             ->get();
@@ -117,6 +118,7 @@ class ProductionController extends Controller
 
         $production = DB::transaction(function () use ($validated, $beamConsumed, $netMetersProduced) {
             $beam = SizingBeam::whereKey($validated['sizing_beam_id'])->lockForUpdate()->firstOrFail();
+            $beam->loadMissing('sizingSlip');
             $fabric = FabricStock::whereKey($validated['fabric_stock_id'])->lockForUpdate()->firstOrFail();
 
             if ($beam->status !== 'mounted_on_loom' || $beam->assigned_loom_no !== $validated['loom_no']) {
@@ -127,13 +129,16 @@ class ProductionController extends Controller
                 return null;
             }
 
-            $leakageMeters = max(0, $beamConsumed - $netMetersProduced);
-            $leakagePercentage = $beamConsumed > 0 ? round(($leakageMeters / $beamConsumed) * 100, 2) : 0;
+            $widthMultiplier = (float) ($beam->sizingSlip?->width_multiplier ?? 1);
+            $expectedFabricMeters = round($beamConsumed * $widthMultiplier, 2);
+            $leakageMeters = max(0, $expectedFabricMeters - $netMetersProduced);
+            $leakagePercentage = $expectedFabricMeters > 0 ? round(($leakageMeters / $expectedFabricMeters) * 100, 2) : 0;
             $theoreticalMeters = ($validated['rpm'] * 60 * 12) / ($validated['picks_per_inch'] * 39.37);
             $efficiency = $theoreticalMeters > 0 ? min(99.9, round(($netMetersProduced / $theoreticalMeters) * 100, 2)) : 85.0;
 
             $validated['fabric_quality'] = $fabric->quality_name;
             $validated['net_meters_produced'] = $netMetersProduced;
+            $validated['expected_fabric_meters'] = $expectedFabricMeters;
             $validated['leakage_waste_meters'] = $leakageMeters;
             $validated['leakage_percentage'] = $leakagePercentage;
             $validated['efficiency_percentage'] = $efficiency;

@@ -192,17 +192,17 @@
 
         @if($page === 'leakage')
             @php
-                $expectedTotal = (float) $beamLeakageRows->sum('total_length_meters');
+                $expectedTotal = (float) $beamLeakageRows->sum(fn ($beam) => (float) $beam->total_length_meters * (float) ($beam->sizingSlip?->width_multiplier ?? 1));
                 $actualTotal = (float) $beamLeakageRows->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
                 $gapTotal = max(0, $expectedTotal - $actualTotal);
-                $finalLeakageTotal = (float) $beamLeakageRows->where('status', 'exhausted')->sum(fn ($beam) => max(0, (float) $beam->total_length_meters - (float) ($beam->productions_sum_net_meters_produced ?? 0)));
+                $finalLeakageTotal = (float) $beamLeakageRows->where('status', 'exhausted')->sum(fn ($beam) => max(0, ((float) $beam->total_length_meters * (float) ($beam->sizingSlip?->width_multiplier ?? 1)) - (float) ($beam->productions_sum_net_meters_produced ?? 0)));
             @endphp
             <section class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                     <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
                         <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Expected Production</div>
                         <div class="mt-1 font-mono text-2xl font-black text-zinc-900">{{ number_format($expectedTotal, 2) }}m</div>
-                        <p class="mt-1 text-xs text-zinc-400">Sum of sizing beam lengths</p>
+                        <p class="mt-1 text-xs text-zinc-400">Warp meters × each slip’s width factor</p>
                     </div>
                     <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
                         <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Actual Production</div>
@@ -241,7 +241,7 @@
                             <tbody class="divide-y divide-zinc-100">
                                 @forelse($beamLeakageRows as $beam)
                                     @php
-                                        $expectedMeters = (float) $beam->total_length_meters;
+                                        $expectedMeters = (float) $beam->total_length_meters * (float) ($beam->sizingSlip?->width_multiplier ?? 1);
                                         $actualMeters = (float) ($beam->productions_sum_net_meters_produced ?? 0);
                                         $productionGap = max(0, $expectedMeters - $actualMeters);
                                         $isFinished = $beam->status === 'exhausted';
@@ -341,8 +341,8 @@
             <div class="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 @forelse($loomWiseStats as $stat)
                     @php
-                        $leakagePct = $stat->total_beam > 0
-                            ? round(($stat->total_leakage / $stat->total_beam) * 100, 1)
+                        $leakagePct = $stat->total_expected_fabric > 0
+                            ? round(($stat->total_leakage / $stat->total_expected_fabric) * 100, 1)
                             : 0;
                         $efficiency = round($stat->avg_eff, 1);
                         $effClass = $efficiency >= 85 ? 'text-zinc-900' : ($efficiency >= 70 ? 'text-zinc-600' : 'text-zinc-400');
@@ -594,6 +594,7 @@
                                     data-quality="{{ $bm->yarn_quality }}"
                                     data-remaining="{{ $bm->remaining_length_meters }}"
                                     data-total="{{ $bm->total_length_meters }}"
+                                    data-width-multiplier="{{ $bm->sizingSlip?->width_multiplier ?? 1 }}"
                                     data-produced="{{ $bm->productions_sum_net_meters_produced ?? 0 }}"
                                     data-ends="{{ $bm->sizingSlip?->total_ends ?? '' }}"
                                     data-weight-pounds="{{ $bm->sizingSlip?->sizing_weight_pounds ?? '' }}"
@@ -650,7 +651,7 @@
                         <strong id="displayNetProduced" class="text-zinc-900 text-lg font-black font-mono">0m</strong>
                     </div>
                     <div class="border-x border-zinc-100">
-                        <span class="text-[10px] text-zinc-600 uppercase font-semibold block mb-1">Leakage / Waste</span>
+                        <span class="text-[10px] text-zinc-600 uppercase font-semibold block mb-1">Production Shortage</span>
                         <strong id="displayLeakageMeters" class="text-zinc-600 text-lg font-black font-mono">0m (0%)</strong>
                     </div>
                     <div>
@@ -714,13 +715,15 @@
             if (opt.dataset.loom && opt.dataset.loom !== 'Ready') {
                 document.getElementById('selectProdLoom').value = opt.dataset.loom;
             }
-            const beamLength = parseFloat(opt.dataset.total) || 0;
+            const warpBeamLength = parseFloat(opt.dataset.total) || 0;
+            const widthMultiplier = parseFloat(opt.dataset.widthMultiplier) || 1;
+            const beamLength = warpBeamLength * widthMultiplier;
             const produced = parseFloat(opt.dataset.produced) || 0;
             const productionVariance = beamLength - produced;
             const ends = opt.dataset.ends || 'not recorded';
             const weightLb = parseFloat(opt.dataset.weightPounds) || 0;
             const weightKg = weightLb * 0.45359237;
-            document.getElementById('displayBeamSummary').innerText = `${beamLength.toFixed(2)}m expected production · ${produced.toFixed(2)}m actually woven · ${Math.abs(productionVariance).toFixed(2)}m ${productionVariance >= 0 ? 'short' : 'over'} · ${ends} ends · ${weightLb ? `${weightKg.toFixed(2)} kg sizing bill (${weightLb.toFixed(2)} lb)` : 'sizing weight not recorded'}`;
+            document.getElementById('displayBeamSummary').innerText = `${warpBeamLength.toFixed(2)}m warp length × ${widthMultiplier} width(s) = ${beamLength.toFixed(2)}m expected fabric · ${produced.toFixed(2)}m woven so far · ${ends} ends · ${weightLb ? `${weightKg.toFixed(2)} kg net yarn bill (${weightLb.toFixed(2)} lb)` : 'net yarn weight not recorded'}`;
         } else {
             document.getElementById('displayBeamSummary').innerText = 'Select a sizing beam to see its set length and gate pass totals.';
         }
@@ -731,12 +734,16 @@
         const start        = parseFloat(document.getElementById('inpStartMeter').value)    || 0;
         const end          = parseFloat(document.getElementById('inpEndMeter').value)       || 0;
         const beamConsumed = parseFloat(document.getElementById('inpBeamConsumed').value)   || 0;
+        const selectedBeam = document.getElementById('selectProdBeam');
+        const selectedOption = selectedBeam.options[selectedBeam.selectedIndex];
+        const widthMultiplier = parseFloat(selectedOption?.dataset.widthMultiplier) || 1;
         const rpm          = parseFloat(document.getElementById('inpRpm').value)            || 350;
         const ppi          = parseFloat(document.getElementById('inpPpi').value)            || 60;
 
         const netProduced  = Math.max(0, end - start);
-        const leakage      = Math.max(0, beamConsumed - netProduced);
-        const leakagePct   = beamConsumed > 0 ? ((leakage / beamConsumed) * 100).toFixed(1) : '0.0';
+        const expectedFabric = beamConsumed * widthMultiplier;
+        const leakage      = Math.max(0, expectedFabric - netProduced);
+        const leakagePct   = expectedFabric > 0 ? ((leakage / expectedFabric) * 100).toFixed(1) : '0.0';
         const theoretical  = (rpm * 60 * 12) / (ppi * 39.37);
         const efficiency   = theoretical > 0 ? Math.min(99.9, (netProduced / theoretical) * 100).toFixed(1) : '0.0';
         const outputShortage = Math.max(0, theoretical - netProduced);

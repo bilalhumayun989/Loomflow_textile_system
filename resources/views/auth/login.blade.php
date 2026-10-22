@@ -38,9 +38,20 @@
         <div class="bg-white border border-zinc-200 rounded-3xl p-6 sm:p-8 shadow-sm">
             
             @if(session('error'))
-                <div class="mb-5 p-3 rounded-xl bg-zinc-100 border border-zinc-300 text-zinc-700 text-xs flex items-center gap-2">
-                    <svg class="w-4 h-4 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div role="alert" class="mb-5 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+                    <svg class="w-4 h-4 shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <span>{{ session('error') }}</span>
+                </div>
+            @endif
+
+            @if($errors->any())
+                <div role="alert" class="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+                    <p class="font-bold">We couldn’t sign you in.</p>
+                    <ul class="mt-1 list-inside list-disc space-y-1">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
             @endif
 
@@ -61,9 +72,6 @@
                         </div>
                         <input type="email" name="email" id="email" required value="{{ old('email', 'admin@loomflow.com') }}" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl pl-10 pr-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent transition-all" placeholder="user@loomflow.com">
                     </div>
-                    @error('email')
-                        <p class="text-zinc-600 text-xs mt-1">{{ $message }}</p>
-                    @enderror
                 </div>
 
                 <div>
