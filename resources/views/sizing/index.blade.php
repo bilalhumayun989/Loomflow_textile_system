@@ -645,8 +645,8 @@
 {{-- ============================================================
      MODAL: NEW SIZING SLIP
 ============================================================ --}}
-<div id="modalNewSizingSlip" class="fixed inset-0 z-50 hidden flex items-center justify-center overflow-y-auto bg-zinc-950/60 p-3 backdrop-blur-sm sm:p-6">
-    <div class="my-auto max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white shadow-2xl">
+<div id="modalNewSizingSlip" class="fixed inset-0 z-50 hidden bg-zinc-950/60 backdrop-blur-sm overflow-y-auto p-4 sm:p-6">
+    <div class="mx-auto my-8 w-full max-w-2xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white shadow-2xl">
 
         {{-- Sticky header --}}
         <div class="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-6 py-4 backdrop-blur">
@@ -908,7 +908,7 @@
 </div>
 
 <!-- MODAL 2: MOUNT BEAM ON LOOM -->
-<div id="modalMountBeam" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+<div id="modalMountBeam" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm overflow-y-auto p-4">
     <div class="bg-white border border-zinc-200 rounded-3xl max-w-sm w-full p-6 shadow-xl relative">
         <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
             <h3 class="text-base font-bold text-zinc-900 flex items-center gap-2">

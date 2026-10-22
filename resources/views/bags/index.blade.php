@@ -450,8 +450,8 @@
 </div>
 
 <!-- MODAL 1: NEW BAG PURCHASE -->
-<div id="modalNewPurchase" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white border border-zinc-200 rounded-3xl max-w-xl w-full p-6 shadow-xl relative my-8">
+<div id="modalNewPurchase" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm overflow-y-auto p-4">
+    <div class="mx-auto my-8 bg-white border border-zinc-200 rounded-3xl max-w-xl w-full p-6 shadow-xl">
         <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
             <div>
                 <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">
@@ -543,7 +543,7 @@
 </div>
 
 <!-- MODAL 2: ISSUE BAGS DAILY -->
-<div id="modalIssueStock" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+<div id="modalIssueStock" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm overflow-y-auto p-4">
     <div class="bg-white border border-zinc-200 rounded-3xl max-w-md w-full p-6 shadow-xl relative">
         <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
             <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">
@@ -602,7 +602,7 @@
 </div>
 
 <!-- MODAL 3: RECEIVE RETURNED BAGS -->
-<div id="modalReturnStock" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+<div id="modalReturnStock" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm overflow-y-auto p-4">
     <div class="bg-white border border-zinc-200 rounded-3xl max-w-md w-full p-6 shadow-xl relative">
         <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
             <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">

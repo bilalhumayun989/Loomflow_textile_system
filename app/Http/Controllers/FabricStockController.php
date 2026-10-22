@@ -84,7 +84,11 @@ class FabricStockController extends Controller
             'fabric_stock_id' => 'required_if:quality_mode,existing|nullable|exists:fabric_stocks,id',
             'quality_name' => 'required_if:quality_mode,new|nullable|string|max:150|unique:fabric_stocks,quality_name',
             'construction' => 'nullable|string|max:150',
-            'width_inches' => 'nullable|numeric|min:20|max:150',
+            'width_inches' => 'required_if:quality_mode,new|nullable|numeric|min:20|max:150',
+            'read' => 'required_if:quality_mode,new|nullable|numeric|gt:0|max:100000',
+            'pick' => 'required_if:quality_mode,new|nullable|numeric|gt:0|max:100000',
+            'warp_count' => 'required_if:quality_mode,new|nullable|numeric|gt:0|max:100000',
+            'weft_count' => 'required_if:quality_mode,new|nullable|numeric|gt:0|max:100000',
             'previous_stock_meters' => 'nullable|numeric|min:0',
             'daily_received_meters' => 'nullable|numeric|min:0',
             'adjustment_meters' => 'nullable|numeric|between:-999999999999,999999999999',
@@ -102,10 +106,26 @@ class FabricStockController extends Controller
         $dispatch = (float) ($validated['dispatch_meters'] ?? 0);
         $stock = DB::transaction(function () use ($validated, $isNew, $received, $adjustment, $dispatch): FabricStock {
             if ($isNew) {
+                $read = (float) $validated['read'];
+                $pick = (float) $validated['pick'];
+                $width = (float) $validated['width_inches'];
+                $warpCount = (float) $validated['warp_count'];
+                $weftCount = (float) $validated['weft_count'];
+                $truncateFourDecimals = static fn (float $value): float => floor(($value + 0.000000001) * 10000) / 10000;
+                $warpWeightPerMeter = $truncateFourDecimals($read * $width / $warpCount / 20 * 1.0936 / 40);
+                $weftWeightPerMeter = $truncateFourDecimals($pick * $width / $weftCount / 20 * 1.0936 / 40);
+
                 $stock = FabricStock::create([
                     'quality_name' => trim($validated['quality_name']),
                     'construction' => $validated['construction'] ?? null,
-                    'width_inches' => $validated['width_inches'] ?? 63,
+                    'width_inches' => $width,
+                    'read' => $read,
+                    'pick' => $pick,
+                    'warp_count' => $warpCount,
+                    'weft_count' => $weftCount,
+                    'warp_weight_per_meter_lb' => $warpWeightPerMeter,
+                    'weft_weight_per_meter_lb' => $weftWeightPerMeter,
+                    'total_weight_per_meter_lb' => $warpWeightPerMeter + $weftWeightPerMeter,
                     'current_stock_meters' => 0,
                     'total_meters_produced' => 0,
                     'total_rolls_in_stock' => 0,

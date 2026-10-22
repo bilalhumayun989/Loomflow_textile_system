@@ -385,8 +385,8 @@
 {{-- ============================================================
      MODAL 1: ADD NEW PART
 ============================================================ --}}
-<div id="modalAddPart" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white border border-zinc-200 rounded-3xl max-w-lg w-full p-6 shadow-xl relative my-8">
+<div id="modalAddPart" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm overflow-y-auto p-4">
+    <div class="mx-auto my-8 bg-white border border-zinc-200 rounded-3xl max-w-lg w-full p-6 shadow-xl">
         <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
             <div>
                 <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">
@@ -472,8 +472,8 @@
 {{-- ============================================================
      MODAL 2: ISSUE PART TO LOOM
 ============================================================ --}}
-<div id="modalIssuePart" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white border border-zinc-200 rounded-3xl max-w-md w-full p-6 shadow-xl relative my-8">
+<div id="modalIssuePart" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm overflow-y-auto p-4">
+    <div class="mx-auto my-8 bg-white border border-zinc-200 rounded-3xl max-w-md w-full p-6 shadow-xl">
         <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
             <div>
                 <h3 class="text-lg font-bold text-zinc-900 flex items-center gap-2">

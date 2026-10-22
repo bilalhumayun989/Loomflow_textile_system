@@ -444,8 +444,8 @@
 {{-- ============================================================
      MODAL 1: ENTER SALE SLIP
 ============================================================ --}}
-<div id="modalNewSaleSlip" class="fixed inset-0 z-50 hidden flex items-center justify-center overflow-y-auto bg-zinc-950/60 p-3 backdrop-blur-sm sm:p-6">
-    <div class="my-auto max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white shadow-2xl">
+<div id="modalNewSaleSlip" class="fixed inset-0 z-50 hidden bg-zinc-950/60 backdrop-blur-sm overflow-y-auto p-4 sm:p-6">
+    <div class="mx-auto my-8 w-full max-w-2xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white shadow-2xl">
         <div class="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-6 py-4 backdrop-blur">
             <div class="flex items-center gap-3">
                 <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-zinc-900">
@@ -601,8 +601,8 @@
 {{-- ============================================================
      MODAL 2: NEW CONTRACT
 ============================================================ --}}
-<div id="modalNewContract" class="fixed inset-0 z-50 hidden flex items-center justify-center overflow-y-auto bg-zinc-950/60 p-3 backdrop-blur-sm sm:p-6">
-    <div class="my-auto max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white shadow-2xl">
+<div id="modalNewContract" class="fixed inset-0 z-50 hidden bg-zinc-950/60 backdrop-blur-sm overflow-y-auto p-4 sm:p-6">
+    <div class="mx-auto my-8 w-full max-w-5xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white shadow-2xl">
         <div class="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-6 py-4 backdrop-blur">
             <div>
                 <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Sales · Contract</p>

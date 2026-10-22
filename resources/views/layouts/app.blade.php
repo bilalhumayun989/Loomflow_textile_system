@@ -362,7 +362,6 @@
             const el = document.getElementById(id);
             if (el) {
                 el.classList.remove('hidden');
-                el.classList.add('flex');
                 document.body.classList.add('overflow-hidden');
             }
         }
@@ -371,7 +370,6 @@
             const el = document.getElementById(id);
             if (el) {
                 el.classList.add('hidden');
-                el.classList.remove('flex');
                 document.body.classList.remove('overflow-hidden');
             }
         }
