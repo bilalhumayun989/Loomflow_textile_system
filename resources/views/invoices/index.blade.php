@@ -5,21 +5,172 @@
 @section('content')
 <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
     <aside class="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm lg:sticky lg:top-24">
-        <a href="{{ route('invoices.index') }}" class="mb-4 flex items-center gap-3 rounded-2xl px-4 py-3 {{ $page === 'dashboard' ? 'bg-zinc-900 text-white' : 'border border-zinc-200 bg-zinc-50 text-zinc-700' }}">
-            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-700"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a2 2 0 01.707.293l5.414 5.414A2 2 0 0119 9v10a2 2 0 01-2 2z"/></svg></span>
-            <span><span class="block text-sm font-extrabold">Invoices Dashboard</span><span class="block text-[10px] text-zinc-400">Receivables & cash position</span></span>
+
+        {{-- Dashboard main link --}}
+        <a href="{{ route('invoices.index') }}"
+           class="mb-4 flex items-center gap-3 rounded-2xl px-4 py-3 transition-all
+                  {{ $page === 'dashboard'
+                       ? 'bg-zinc-900 text-zinc-50 shadow-md'
+                       : 'bg-zinc-50 text-zinc-700 border border-zinc-200 hover:bg-zinc-100 hover:text-zinc-900' }}">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
+                         {{ $page === 'dashboard' ? 'bg-zinc-700' : 'bg-zinc-200' }}">
+                <svg class="h-5 w-5 {{ $page === 'dashboard' ? 'text-zinc-100' : 'text-zinc-600' }}"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </span>
+            <div>
+                <span class="block text-sm font-extrabold leading-tight">Invoices Dashboard</span>
+                <span class="block text-[10px] text-zinc-400 mt-0.5">Receivables & cash position</span>
+            </div>
         </a>
+
         <div class="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Sections</div>
+
         <nav class="space-y-1.5" aria-label="Invoice sections">
-            @foreach ([['invoices', 'invoices.invoices', 'Invoice Register', 'Sales & contract billing'], ['customers', 'invoices.customers', 'Customers', 'Buyer records & balances'], ['payments', 'invoices.payments', 'Payments Received', 'Receipts & allocations'], ['accounts', 'invoices.accounts', 'Cash & Bank', 'Account balances & entries']] as [$key, $routeName, $label, $description])
-                <a href="{{ route($routeName) }}" class="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-xs font-bold {{ $page === $key ? 'bg-zinc-900 text-white' : 'text-zinc-600 hover:bg-zinc-100' }}">
-                    <span class="flex h-7 w-7 items-center justify-center rounded-lg {{ $page === $key ? 'bg-zinc-700' : 'bg-zinc-100' }}"><span class="font-mono text-[10px]">{{ $loop->iteration }}</span></span>
-                    <span><span class="block">{{ $label }}</span><span class="block text-[10px] font-normal text-zinc-400">{{ $description }}</span></span>
-                </a>
-            @endforeach
+
+            {{-- Invoice Register --}}
+            <a href="{{ route('invoices.invoices') }}"
+               class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all
+                      {{ $page === 'invoices'
+                           ? 'bg-zinc-900 text-zinc-50 shadow-sm'
+                           : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+                             {{ $page === 'invoices' ? 'bg-zinc-700' : 'bg-zinc-100' }}">
+                    <svg class="h-3.5 w-3.5 {{ $page === 'invoices' ? 'text-zinc-100' : 'text-zinc-500' }}"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </span>
+                <div>
+                    <span class="block leading-tight">Invoice Register</span>
+                    <span class="block text-[10px] font-normal text-zinc-400">Sales & contract billing</span>
+                </div>
+                @if($page === 'invoices')
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0"></span>
+                @endif
+            </a>
+
+            {{-- Customers --}}
+            <a href="{{ route('invoices.customers') }}"
+               class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all
+                      {{ $page === 'customers'
+                           ? 'bg-zinc-900 text-zinc-50 shadow-sm'
+                           : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+                             {{ $page === 'customers' ? 'bg-zinc-700' : 'bg-zinc-100' }}">
+                    <svg class="h-3.5 w-3.5 {{ $page === 'customers' ? 'text-zinc-100' : 'text-zinc-500' }}"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </span>
+                <div>
+                    <span class="block leading-tight">Customers</span>
+                    <span class="block text-[10px] font-normal text-zinc-400">Buyer records & balances</span>
+                </div>
+                @if($page === 'customers')
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0"></span>
+                @endif
+            </a>
+
+            {{-- Payments Received --}}
+            <a href="{{ route('invoices.payments') }}"
+               class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all
+                      {{ $page === 'payments'
+                           ? 'bg-zinc-900 text-zinc-50 shadow-sm'
+                           : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+                             {{ $page === 'payments' ? 'bg-zinc-700' : 'bg-zinc-100' }}">
+                    <svg class="h-3.5 w-3.5 {{ $page === 'payments' ? 'text-zinc-100' : 'text-zinc-500' }}"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </span>
+                <div>
+                    <span class="block leading-tight">Payments Received</span>
+                    <span class="block text-[10px] font-normal text-zinc-400">Receipts & allocations</span>
+                </div>
+                @if($page === 'payments')
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0"></span>
+                @endif
+            </a>
+
+            {{-- Cash & Bank --}}
+            <a href="{{ route('invoices.accounts') }}"
+               class="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 text-xs font-bold transition-all
+                      {{ $page === 'accounts'
+                           ? 'bg-zinc-900 text-zinc-50 shadow-sm'
+                           : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900' }}">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+                             {{ $page === 'accounts' ? 'bg-zinc-700' : 'bg-zinc-100' }}">
+                    <svg class="h-3.5 w-3.5 {{ $page === 'accounts' ? 'text-zinc-100' : 'text-zinc-500' }}"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                </span>
+                <div>
+                    <span class="block leading-tight">Cash & Bank</span>
+                    <span class="block text-[10px] font-normal text-zinc-400">Account balances & entries</span>
+                </div>
+                @if($page === 'accounts')
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0"></span>
+                @endif
+            </a>
+
         </nav>
-        <div class="mt-5 border-t border-zinc-100 pt-4 text-[10px] leading-5 text-zinc-500">
-            Invoice balances come from posted invoices and allocated receipts. Receipts also post to the selected cash/bank account.
+
+        {{-- Financial snapshot --}}
+        @if(isset($totalDue))
+        <div class="mt-4 rounded-2xl bg-zinc-50 border border-zinc-200 p-3 space-y-2">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Financials</div>
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-zinc-500">Invoiced</span>
+                <span class="font-mono font-bold text-zinc-900">Rs. {{ number_format($totalInvoiced, 0) }}</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-zinc-500">Received</span>
+                <span class="font-mono font-bold text-zinc-600">Rs. {{ number_format($totalReceived, 0) }}</span>
+            </div>
+            <div class="pt-1.5 border-t border-zinc-200 flex items-center justify-between text-xs">
+                <span class="text-zinc-700 font-bold">Outstanding</span>
+                <span class="font-mono font-black {{ $totalDue > 0 ? 'text-zinc-900' : 'text-zinc-400' }}">
+                    Rs. {{ number_format($totalDue, 0) }}
+                </span>
+            </div>
+        </div>
+        @endif
+
+        {{-- Quick Actions --}}
+        <div class="mt-5 pt-4 border-t border-zinc-100 space-y-1.5">
+            <div class="px-1 text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Quick Actions</div>
+            <a href="{{ route('invoices.invoices') }}#invoice-entry"
+               class="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[11px] font-bold text-zinc-700 hover:bg-zinc-100 transition-colors">
+                <svg class="h-3.5 w-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Create Invoice
+            </a>
+            <a href="{{ route('invoices.payments') }}#payment-entry"
+               class="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[11px] font-bold text-zinc-700 hover:bg-zinc-100 transition-colors">
+                <svg class="h-3.5 w-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                Receive Payment
+            </a>
+            <a href="{{ route('sales.index') }}"
+               class="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-[11px] font-bold text-zinc-700 hover:bg-zinc-100 transition-colors">
+                <svg class="h-3.5 w-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Sales Module
+            </a>
         </div>
     </aside>
 
