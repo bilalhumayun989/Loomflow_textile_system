@@ -128,7 +128,6 @@
             <h1 class="text-2xl font-black text-zinc-900 tracking-tight">{{ ['dashboard' => 'Sizing Dashboard', 'beams' => 'Beams Tracking', 'slips' => 'Sizing Slips', 'balance' => 'Sizing Balance'][$page] }}</h1>
         </div>
         <div class="flex items-center gap-3">
-            <button type="button" onclick="openModal('modalYarnQualities')" class="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-300 text-xs font-bold transition-colors">Manage Yarn Qualities</button>
             <button type="button" onclick="openModal('modalNewSizingSlip')" class="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 text-zinc-50 font-extrabold text-xs shadow-sm transition-all flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 <span>+ New Sizing Slip Entry</span>
@@ -310,7 +309,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full min-w-[1500px] whitespace-nowrap text-left text-xs">
                 <thead>
                     <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
                         <th class="px-4 py-3">Beam #</th>
@@ -474,10 +473,10 @@
                             <div class="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
                                 <p class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Final Perch invoice reconciliation</p>
                                 <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-zinc-600 sm:grid-cols-3">
-                                    <span>Wet cones ({{ $slipDetails->wet_cone_bags }} bags): <strong>{{ number_format($slipDetails->wet_cone_weight_kg, 2) }} kg</strong></span>
+                                    <span>Used cones-bags ({{ $slipDetails->wet_cone_bags }} bags): <strong>{{ number_format($slipDetails->wet_cone_weight_kg, 2) }} kg</strong></span>
                                     <span>Empty bags ({{ $slipDetails->empty_bag_count }}): <strong>{{ number_format($slipDetails->empty_bag_weight_kg, 2) }} kg</strong></span>
-                                    <span>Paper bags ({{ $slipDetails->paper_bag_count }}): <strong>{{ number_format($slipDetails->paper_bag_weight_kg, 2) }} kg</strong></span>
-                                    <span>Sound cones ({{ $slipDetails->sound_cone_count }}): <strong>{{ number_format($slipDetails->sound_cone_weight_kg, 2) }} kg</strong></span>
+                                    <span>Gatta-bags ({{ $slipDetails->paper_bag_count }}): <strong>{{ number_format($slipDetails->paper_bag_weight_kg, 2) }} kg</strong></span>
+                                    <span>Salim/unused cones ({{ $slipDetails->sound_cone_count }}): <strong>{{ number_format($slipDetails->sound_cone_weight_kg, 2) }} kg</strong></span>
                                     <span>Cartons ({{ $slipDetails->carton_count }}): <strong>{{ number_format($slipDetails->carton_weight_kg, 2) }} kg</strong></span>
                                     <span>Total deductions: <strong>{{ number_format($slipDetails->returned_materials_weight_kg, 2) }} kg</strong></span>
                                 </div>
@@ -818,62 +817,52 @@
                 </div>
             </div>
 
-            {{-- ── Section 4: Construction Details (optional) ── --}}
+            {{-- ── Section 4: Warp Construction ── --}}
             <div>
-                <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Construction Details <span class="normal-case font-normal text-zinc-300">(optional)</span></div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Ends / Taarein</label>
-                        <input type="number" id="inpTotalEnds" name="total_ends" min="1" placeholder="e.g. 10080" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
-                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                        <span class="mt-1 block text-[10px] text-zinc-400">Or leave blank and use Reed × Width</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-zinc-600 mb-1">Reed</label>
-                            <input type="number" id="inpReedCount" name="reed_count" min="1" placeholder="—" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
-                                   class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-zinc-600 mb-1">Width (in)</label>
-                            <input type="number" step="0.01" id="inpFabricWidth" name="fabric_width_inches" min="0.01" placeholder="—" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
-                                   class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Extra Selvedge Ends</label>
-                        <input type="number" id="inpSelvedgeEnds" name="selvedge_ends" min="0" value="0" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
-                               class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                    </div>
-                    <div>
+                <div class="mb-3">
+                    <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Warp Construction</div>
+                    <p class="mt-1 text-[10px] text-zinc-500">Enter the total warp ends from the gate pass. This is used to estimate and check warp count.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Ends / Taarein</label>
+                    <input type="number" id="inpTotalEnds" name="total_ends" required min="1" placeholder="e.g. 10080" oninput="updateSizingCountPreview()"
+                           class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    <span class="mt-1 block text-[10px] text-zinc-400">Required to create a sizing slip.</span>
+                </div>
+            </div>
+
+            <div>
+                <div class="mb-3">
+                    <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Sizing Bill Weight</div>
+                    <p id="sizingWeightSourceHint" class="mt-1 text-[10px] text-zinc-500">Enter the net warp yarn weight from the bill. The gross weight is optional for Raw Perch.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div id="sizingGrossWeightField">
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Gross Weight on Sizing Bill (kg)</label>
                         <input type="number" step="0.01" id="inpSizingGrossWeightKg" name="sizing_gross_weight_kg" min="0.01" placeholder="e.g. 2550" oninput="updateSizingWeightPreview(); updateFinalPerchPreview()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                        <span id="sizingGrossWeightPoundsPreview" class="mt-1 block text-[10px] text-zinc-500">Bill gross weight, if listed.</span>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Net Warp Yarn Weight on Bill (kg)</label>
-                        <input type="number" step="0.01" id="inpSizingWeightKg" name="sizing_weight_kg" min="0.01" placeholder="e.g. 2266" oninput="updateSizingWeightPreview(); updateSizingCountPreview()"
+                    <div id="sizingNetWeightField">
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Net Warp Yarn Weight (kg)</label>
+                        <input type="number" step="0.01" id="inpSizingWeightKg" name="sizing_weight_kg" min="0.01" placeholder="e.g. 2266" oninput="updateSizingCountPreview()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                        <span id="sizingWeightPoundsPreview" class="mt-1 block text-[10px] text-zinc-500">Enter the net yarn weight, excluding bags and cones.</span>
-                        <span id="sizingGrossNetDifferencePreview" class="mt-1 block text-[10px] font-semibold text-zinc-600">Gross-to-net difference appears when both bill weights are entered.</span>
                         <span id="sizingCountPreview" class="mt-1 block text-[10px] font-semibold text-zinc-700">Warp count estimate needs ends, set length, and net weight.</span>
-                        <span class="mt-1 block text-[10px] text-zinc-400">Count estimate = ends × set length in metres ÷ (1693.6 × net kg). It is a reconciliation check, not a lab test.</span>
+                        <span class="mt-1 block text-[10px] text-zinc-400">Count estimate = ends × set length in metres ÷ (1693.6 × net kg). Returned materials are excluded from net weight.</span>
                     </div>
                 </div>
             </div>
 
             <section id="finalPerchFields" class="hidden rounded-2xl border border-zinc-300 bg-zinc-50 p-4 space-y-4">
-                <div><h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Final Perch Invoice — returned materials</h4><p class="mt-1 text-[10px] text-zinc-500">Enter the invoice gross yarn weight and returned quantities. Net yarn and bill total are calculated automatically.</p></div>
+                <div><h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Final Perch Invoice — returned materials</h4><p class="mt-1 text-[10px] text-zinc-500">These returned weights are subtracted from the gross bill weight. The remaining net warp weight is used for warp-count reconciliation and sizing charges.</p></div>
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="text-xs font-semibold">Wet cones / bora gala — bags<input name="wet_cone_bags" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Wet cones weight (kg)<input id="wetConeWeightKg" name="wet_cone_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Used cones-bags count<input name="wet_cone_bags" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Used cones-bags weight (kg)<input id="wetConeWeightKg" name="wet_cone_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
                     <label class="text-xs font-semibold">Empty bags count<input name="empty_bag_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
                     <label class="text-xs font-semibold">Empty bags weight (kg)<input id="emptyBagWeightKg" name="empty_bag_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Paper bags count<input name="paper_bag_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Paper bags weight (kg)<input id="paperBagWeightKg" name="paper_bag_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Sound / half-sound cones count<input name="sound_cone_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Sound cones weight (kg)<input id="soundConeWeightKg" name="sound_cone_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Gatta-bags count<input name="paper_bag_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Gatta-bags weight (kg)<input id="paperBagWeightKg" name="paper_bag_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Salim/unused cones count<input name="sound_cone_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Salim/unused cones weight (kg)<input id="soundConeWeightKg" name="sound_cone_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
                     <label class="text-xs font-semibold">Cartons count<input name="carton_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
                     <label class="text-xs font-semibold">Cartons weight (kg)<input id="cartonWeightKg" name="carton_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
                 </div>
@@ -908,8 +897,8 @@
 </div>
 
 <!-- MODAL 2: MOUNT BEAM ON LOOM -->
-<div id="modalMountBeam" class="fixed inset-0 z-50 hidden bg-zinc-900/50 backdrop-blur-sm overflow-y-auto p-4">
-    <div class="bg-white border border-zinc-200 rounded-3xl max-w-sm w-full p-6 shadow-xl relative">
+<div id="modalMountBeam" class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-zinc-900/50 p-4 backdrop-blur-sm">
+    <div class="relative max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-y-auto rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl">
         <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
             <h3 class="text-base font-bold text-zinc-900 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-zinc-700"></span>
@@ -989,6 +978,11 @@
         document.getElementById('inpSizingGrossWeightKg').required = isFinal;
         document.getElementById('sizingRatePerKg').required = isFinal;
         document.getElementById('inpSizingWeightKg').readOnly = isFinal;
+        document.getElementById('sizingNetWeightField').classList.toggle('hidden', isFinal);
+        document.getElementById('sizingGrossWeightField').classList.toggle('sm:col-span-2', isFinal);
+        document.getElementById('sizingWeightSourceHint').innerText = isFinal
+            ? 'Final Perch net weight is calculated from gross weight minus all returned-material deductions below.'
+            : 'Enter the net warp yarn weight from the bill. The gross weight is optional for Raw Perch.';
         if (isFinal) {
             updateFinalPerchPreview();
         }
@@ -1010,15 +1004,7 @@
 
     function updateSizingWeightPreview() {
         const allocated = parseFloat(document.getElementById('inpBagsAllocated').value) || 0;
-        const grossKilograms = parseFloat(document.getElementById('inpSizingGrossWeightKg').value) || 0;
-        const netKilograms = parseFloat(document.getElementById('inpSizingWeightKg').value) || 0;
         document.getElementById('sizingBagWeightPreview').innerText = `100 lb per bag · ${(allocated * 100 * 0.45359237).toFixed(2)} kg nominal total`;
-        document.getElementById('sizingGrossWeightPoundsPreview').innerText = grossKilograms > 0 ? `${grossKilograms.toFixed(2)} kg = ${(grossKilograms / 0.45359237).toFixed(2)} lb stored` : 'Bill gross weight, if listed.';
-        document.getElementById('sizingWeightPoundsPreview').innerText = netKilograms > 0 ? `${netKilograms.toFixed(2)} kg = ${(netKilograms / 0.45359237).toFixed(2)} lb stored` : 'Enter the net yarn weight after bill deductions.';
-        const difference = grossKilograms - netKilograms;
-        document.getElementById('sizingGrossNetDifferencePreview').innerText = grossKilograms > 0 && netKilograms > 0
-            ? `Gross-to-net difference: ${difference.toFixed(2)} kg (${(difference / 0.45359237).toFixed(2)} lb).`
-            : 'Gross-to-net difference appears when both bill weights are entered.';
     }
 
     function calculateSizingBags() {
@@ -1072,10 +1058,7 @@
 
     function updateSizingCountPreview() {
         const endsInput = parseFloat(document.getElementById('inpTotalEnds').value) || 0;
-        const reed = parseFloat(document.getElementById('inpReedCount').value) || 0;
-        const width = parseFloat(document.getElementById('inpFabricWidth').value) || 0;
-        const selvedge = parseFloat(document.getElementById('inpSelvedgeEnds').value) || 0;
-        const ends = endsInput || (reed > 0 && width > 0 ? Math.round(reed * width) + selvedge : 0);
+        const ends = endsInput;
         const length = parseFloat(document.getElementById('inpSetLength').value) || 0;
         const lengthMeters = length * (document.getElementById('selectSetLengthUnit').value === 'gaz' ? 0.9144 : 1);
         const weightKg = parseFloat(document.getElementById('inpSizingWeightKg').value) || 0;
