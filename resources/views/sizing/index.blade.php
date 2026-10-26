@@ -167,16 +167,16 @@
             <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-700 flex items-center justify-between">
                 <span>Bags Consumed in Beams</span><span class="w-2 h-2 rounded-full bg-zinc-600"></span>
             </div>
-            <div class="text-2xl font-black text-zinc-900 mt-1">{{ $totalUsedBags }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
-            <div class="text-[11px] text-zinc-500 mt-1">Out of {{ $totalAllocatedBags }} allocated</div>
+            <div class="text-2xl font-black text-zinc-900 mt-1">{{ number_format((float) $totalUsedBags, 2) }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
+            <div class="text-[11px] text-zinc-500 mt-1">Out of {{ number_format((float) $totalAllocatedBags, 2) }} allocated</div>
         </div>
         <div class="glass-card rounded-2xl p-4 border border-zinc-300 bg-zinc-50">
             <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-600 flex items-center justify-between">
                 <span>Unused Bags Status</span><span class="w-2 h-2 rounded-full bg-zinc-500"></span>
             </div>
             <div class="text-xs space-y-1 mt-1 font-bold">
-                <div class="flex justify-between"><span class="text-zinc-500">Returned to Factory:</span> <span class="text-zinc-800 font-mono">{{ $totalReturnedBags }} bags</span></div>
-                <div class="flex justify-between"><span class="text-zinc-500">Held With Sizing:</span> <span class="text-zinc-800 font-mono">{{ $totalHeldWithSizing }} bags</span></div>
+                <div class="flex justify-between"><span class="text-zinc-500">Returned to Factory:</span> <span class="text-zinc-800 font-mono">{{ number_format((float) $totalReturnedBags, 2) }} bags</span></div>
+                <div class="flex justify-between"><span class="text-zinc-500">Held With Sizing:</span> <span class="text-zinc-800 font-mono">{{ number_format((float) $totalHeldWithSizing, 2) }} bags</span></div>
             </div>
         </div>
     </div>
@@ -203,7 +203,7 @@
                 <tbody class="divide-y divide-zinc-100">
                     @forelse($slips as $s)
                         @php
-                            $bagVariance = (int) $s->bags_allocated - (int) $s->bags_used - (int) $s->bags_returned_to_factory - (int) $s->bags_held_with_sizing;
+                            $bagVariance = (int) round(((float) $s->bags_allocated - (float) $s->bags_used - (float) $s->bags_returned_to_factory - (float) $s->bags_held_with_sizing) * 100);
                             $grossKg = $s->sizing_gross_weight_pounds !== null ? (float) $s->sizing_gross_weight_pounds * 0.45359237 : null;
                             $netKg = $s->sizing_weight_pounds !== null ? (float) $s->sizing_weight_pounds * 0.45359237 : null;
                             $expectedMeters = $s->expectedFabricMeters();
@@ -220,12 +220,12 @@
                         <tr class="align-top hover:bg-zinc-50">
                             <td class="px-4 py-4"><span class="font-mono font-bold text-zinc-900">{{ $s->slip_no }}</span><span class="mt-1 block text-[10px] text-zinc-400">{{ $s->slip_date->format('d M, Y') }}</span><span class="block text-[10px] text-zinc-500">{{ $s->sizing_party }}</span></td>
                             <td class="px-4 py-4"><span class="font-semibold text-zinc-700">{{ $s->yarn_quality }}</span><span class="mt-1 block text-[10px] text-zinc-400">{{ number_format($s->total_ends ?? 0) }} ends · {{ number_format($s->width_multiplier, 2) }} panna</span></td>
-                            <td class="px-4 py-4 text-right font-mono font-bold text-zinc-900">{{ $s->bags_allocated }}</td>
-                            <td class="px-4 py-4 text-right font-mono text-zinc-700">{{ $s->bags_used }} / {{ $s->bags_returned_to_factory }} / {{ $s->bags_held_with_sizing }}</td>
+                            <td class="px-4 py-4 text-right font-mono font-bold text-zinc-900">{{ number_format((float) $s->bags_allocated, 2) }}</td>
+                            <td class="px-4 py-4 text-right font-mono text-zinc-700">{{ number_format((float) $s->bags_used, 2) }} / {{ number_format((float) $s->bags_returned_to_factory, 2) }} / {{ number_format((float) $s->bags_held_with_sizing, 2) }}</td>
                             <td class="px-4 py-4">
                                 @if($bagVariance === 0)<span class="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">Balanced</span>
-                                @elseif($bagVariance > 0)<span class="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">{{ $bagVariance }} unaccounted</span>
-                                @else<span class="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700">{{ abs($bagVariance) }} over-reported</span>@endif
+                                @elseif($bagVariance > 0)<span class="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">{{ number_format($bagVariance / 100, 2) }} unaccounted</span>
+                                @else<span class="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700">{{ number_format(abs($bagVariance) / 100, 2) }} over-reported</span>@endif
                             </td>
                             <td class="px-4 py-4 text-right font-mono text-zinc-700">{{ $grossKg !== null ? number_format($grossKg, 2).' kg' : '—' }}<span class="block text-[10px] text-zinc-400">net {{ $netKg !== null ? number_format($netKg, 2).' kg' : 'not entered' }}</span>@if($grossKg !== null && $netKg !== null)<span class="block text-[10px] text-zinc-500">{{ number_format($grossKg - $netKg, 2) }} kg deduction</span>@endif</td>
                             <td class="px-4 py-4 text-right font-mono font-semibold text-zinc-800">{{ number_format($expectedMeters, 2) }}m<span class="block text-[10px] font-normal text-zinc-400">set {{ number_format($s->total_length_meters, 2) }}m × {{ number_format($s->width_multiplier, 2) }}</span></td>
@@ -437,17 +437,17 @@
                         <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                             <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Set length / width factor</span><strong class="mt-1 block text-sm text-zinc-800">{{ number_format($slipDetails->set_length_value ?? $slipDetails->total_length_meters, 2) }} {{ $slipDetails->set_length_unit === 'gaz' ? 'gaz' : 'meters' }} × {{ number_format($slipDetails->width_multiplier, 2) }}</strong></div>
                             <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Raw / finished beams</span><strong class="mt-1 block text-sm text-zinc-800">{{ $slipDetails->back_beam_count ?? '—' }} / {{ $slipDetails->total_beams }}</strong></div>
-                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Bags allocated / used</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ $slipDetails->bags_allocated }} / {{ $slipDetails->bags_used }}</strong></div>
-                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Returned / held</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ $slipDetails->bags_returned_to_factory }} / {{ $slipDetails->bags_held_with_sizing }}</strong></div>
+                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Bags allocated / used</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ number_format((float) $slipDetails->bags_allocated, 2) }} / {{ number_format((float) $slipDetails->bags_used, 2) }}</strong></div>
+                            <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Returned / held</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ number_format((float) $slipDetails->bags_returned_to_factory, 2) }} / {{ number_format((float) $slipDetails->bags_held_with_sizing, 2) }}</strong></div>
                             <div class="rounded-xl border border-zinc-100 p-3"><span class="block text-[10px] font-bold uppercase text-zinc-400">Ends / Taarein</span><strong class="mt-1 block font-mono text-sm text-zinc-800">{{ $slipDetails->total_ends ? number_format($slipDetails->total_ends) : 'Not recorded' }}</strong></div>
                         </div>
 
                         @php
-                            $slipBagVariance = $slipDetails->bags_allocated - $slipDetails->bags_used - $slipDetails->bags_returned_to_factory - $slipDetails->bags_held_with_sizing;
+                            $slipBagVariance = (int) round(((float) $slipDetails->bags_allocated - (float) $slipDetails->bags_used - (float) $slipDetails->bags_returned_to_factory - (float) $slipDetails->bags_held_with_sizing) * 100);
                         @endphp
                         <p class="mt-3 text-xs {{ $slipBagVariance === 0 ? 'text-emerald-700' : 'text-amber-800' }}">
-                            Bag reconciliation: {{ $slipDetails->bags_allocated }} sent − {{ $slipDetails->bags_used }} used − {{ $slipDetails->bags_returned_to_factory }} returned − {{ $slipDetails->bags_held_with_sizing }} held =
-                            <strong>{{ $slipBagVariance === 0 ? 'balanced' : ($slipBagVariance > 0 ? $slipBagVariance.' bag(s) unaccounted' : abs($slipBagVariance).' bag(s) over-reported') }}</strong>.
+                            Bag reconciliation: {{ number_format((float) $slipDetails->bags_allocated, 2) }} sent − {{ number_format((float) $slipDetails->bags_used, 2) }} used − {{ number_format((float) $slipDetails->bags_returned_to_factory, 2) }} returned − {{ number_format((float) $slipDetails->bags_held_with_sizing, 2) }} held =
+                            <strong>{{ $slipBagVariance === 0 ? 'balanced' : ($slipBagVariance > 0 ? number_format($slipBagVariance / 100, 2).' bag(s) unaccounted' : number_format(abs($slipBagVariance) / 100, 2).' bag(s) over-reported') }}</strong>.
                             This flags a discrepancy for review; it does not establish its cause.
                         </p>
 
@@ -579,20 +579,20 @@
                             <td class="px-4 py-3 text-zinc-500 font-mono">{{ $s->slip_date->format('d M, Y') }}</td>
                             <td class="px-4 py-3 font-semibold text-zinc-700">{{ $s->sizing_party }}</td>
                             <td class="px-4 py-3 text-zinc-600 font-mono">{{ $s->yarn_quality }}</td>
-                            <td class="px-4 py-3 text-center font-bold text-zinc-900 font-mono">{{ $s->bags_allocated }}</td>
-                            <td class="px-4 py-3 text-center font-black text-zinc-900 bg-zinc-50 border-x border-zinc-200 font-mono">{{ $s->bags_used }}</td>
-                            <td class="px-4 py-3 text-center font-bold text-zinc-600 bg-zinc-50 border-r border-zinc-200 font-mono">{{ $s->bags_returned_to_factory }}</td>
-                            <td class="px-4 py-3 text-center font-bold text-zinc-600 bg-zinc-50 border-r border-zinc-200 font-mono">{{ $s->bags_held_with_sizing }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-900 font-mono">{{ number_format((float) $s->bags_allocated, 2) }}</td>
+                            <td class="px-4 py-3 text-center font-black text-zinc-900 bg-zinc-50 border-x border-zinc-200 font-mono">{{ number_format((float) $s->bags_used, 2) }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-600 bg-zinc-50 border-r border-zinc-200 font-mono">{{ number_format((float) $s->bags_returned_to_factory, 2) }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-600 bg-zinc-50 border-r border-zinc-200 font-mono">{{ number_format((float) $s->bags_held_with_sizing, 2) }}</td>
                             @php
-                                $bagVariance = $s->bags_allocated - $s->bags_used - $s->bags_returned_to_factory - $s->bags_held_with_sizing;
+                                $bagVariance = (int) round(((float) $s->bags_allocated - (float) $s->bags_used - (float) $s->bags_returned_to_factory - (float) $s->bags_held_with_sizing) * 100);
                             @endphp
                             <td class="px-4 py-3 text-center">
                                 @if($bagVariance === 0)
                                     <span class="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">Balanced</span>
                                 @elseif($bagVariance > 0)
-                                    <span class="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">{{ $bagVariance }} unaccounted</span>
+                                    <span class="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">{{ number_format($bagVariance / 100, 2) }} unaccounted</span>
                                 @else
-                                    <span class="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700">{{ abs($bagVariance) }} over-reported</span>
+                                    <span class="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700">{{ number_format(abs($bagVariance) / 100, 2) }} over-reported</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-center">
@@ -712,7 +712,7 @@
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Yarn Quality *</label>
                         <div class="flex gap-2">
-                            <select id="inpYarnQuality" name="yarn_quality" required data-yarn-quality-select onchange="updateSizingCountPreview()"
+                            <select id="inpYarnQuality" name="yarn_quality" required data-yarn-quality-select
                                     class="min-w-0 flex-1 bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                                 <option value="">Select yarn quality</option>
                                 @foreach($yarnQualities as $yarnQuality)
@@ -721,6 +721,7 @@
                             </select>
                             <button type="button" onclick="openModal('modalYarnQualities')" class="shrink-0 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100">+ Create</button>
                         </div>
+                        <p class="mt-1 text-[10px] text-zinc-400">The selected quality records the declared yarn count, such as 52. This estimate does not change it.</p>
                     </div>
                 </div>
             </div>
@@ -737,28 +738,28 @@
                 <div class="p-4 space-y-3">
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Bags Given to Sizing *</label>
-                        <input type="number" id="inpBagsAllocated" name="bags_allocated" required min="1"
-                               placeholder="e.g. 75" oninput="calculateSizingBags(); updateSizingWeightPreview()"
+                        <input type="number" id="inpBagsAllocated" name="bags_allocated" required min="0.01" step="0.01" readonly
+                               placeholder="Select a bag receipt" oninput="calculateSizingBags(); updateSizingWeightPreview()"
                                class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2.5 text-base text-zinc-900 font-mono font-black focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         <span id="sizingBagWeightPreview" class="mt-1 block text-[10px] text-zinc-500">100 lb per bag · 0.00 kg total</span>
                     </div>
                     <div class="grid grid-cols-3 gap-3">
                         <div class="rounded-xl border border-zinc-200 bg-white p-3">
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Used in Beams *</label>
-                            <input type="number" id="inpBagsUsed" name="bags_used" required min="0"
+                            <input type="number" id="inpBagsUsed" name="bags_used" required min="0" step="0.01"
                                    placeholder="65" oninput="calculateSizingBags()"
                                    class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         </div>
                         <div class="rounded-xl border border-zinc-200 bg-white p-3">
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Returned to Factory</label>
                             <input type="number" id="inpBagsReturned" name="bags_returned_to_factory"
-                                   value="0" min="0" oninput="calculateSizingBags()"
+                                   value="0" min="0" step="0.01" oninput="calculateSizingBags()"
                                    class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         </div>
                         <div class="rounded-xl border border-zinc-200 bg-white p-3">
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">Held with Sizing</label>
                             <input type="number" id="inpBagsHeld" name="bags_held_with_sizing"
-                                   value="0" min="0" oninput="calculateSizingBags()"
+                                   value="0" min="0" step="0.01" oninput="calculateSizingBags()"
                                    class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         </div>
                     </div>
@@ -846,25 +847,27 @@
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Net Warp Yarn Weight (kg)</label>
                         <input type="number" step="0.01" id="inpSizingWeightKg" name="sizing_weight_kg" min="0.01" placeholder="e.g. 2266" oninput="updateSizingCountPreview()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                        <span id="sizingCountPreview" class="mt-1 block text-[10px] font-semibold text-zinc-700">Warp count estimate needs ends, set length, and net weight.</span>
-                        <span class="mt-1 block text-[10px] text-zinc-400">Count estimate = ends × set length in metres ÷ (1693.6 × net kg). Returned materials are excluded from net weight.</span>
                     </div>
+                </div>
+                <div class="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                    <span id="sizingCountPreview" class="block text-[10px] font-semibold text-zinc-700">Enter total ends, set length, and net weight to estimate yarn count.</span>
+                    <span class="mt-1 block text-[10px] text-zinc-400">Estimate = ends × set length in metres ÷ (1693.6 × net kg). It is a reconciliation check and does not change the selected yarn quality.</span>
                 </div>
             </div>
 
             <section id="finalPerchFields" class="hidden rounded-2xl border border-zinc-300 bg-zinc-50 p-4 space-y-4">
                 <div><h4 class="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Final Perch Invoice — returned materials</h4><p class="mt-1 text-[10px] text-zinc-500">These returned weights are subtracted from the gross bill weight. The remaining net warp weight is used for warp-count reconciliation and sizing charges.</p></div>
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="text-xs font-semibold">Used cones-bags count<input name="wet_cone_bags" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Used cones-bags weight (kg)<input id="wetConeWeightKg" name="wet_cone_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Empty bags count<input name="empty_bag_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Empty bags weight (kg)<input id="emptyBagWeightKg" name="empty_bag_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Gatta-bags count<input name="paper_bag_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Gatta-bags weight (kg)<input id="paperBagWeightKg" name="paper_bag_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Salim/unused cones count<input name="sound_cone_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Salim/unused cones weight (kg)<input id="soundConeWeightKg" name="sound_cone_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Cartons count<input name="carton_count" type="number" min="0" value="0" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
-                    <label class="text-xs font-semibold">Cartons weight (kg)<input id="cartonWeightKg" name="carton_weight_kg" type="number" min="0" step="0.01" value="0" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Used cones-bags count<input name="wet_cone_bags" type="number" min="0" placeholder="Enter count if returned" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Used cones-bags weight (kg)<input id="wetConeWeightKg" name="wet_cone_weight_kg" type="number" min="0" step="0.01" placeholder="Enter weight if returned" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Empty bags count<input name="empty_bag_count" type="number" min="0" placeholder="Enter count if returned" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Empty bags weight (kg)<input id="emptyBagWeightKg" name="empty_bag_weight_kg" type="number" min="0" step="0.01" placeholder="Enter weight if returned" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Gatta-bags count<input name="paper_bag_count" type="number" min="0" placeholder="Enter count if returned" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Gatta-bags weight (kg)<input id="paperBagWeightKg" name="paper_bag_weight_kg" type="number" min="0" step="0.01" placeholder="Enter weight if returned" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Salim/unused cones count<input name="sound_cone_count" type="number" min="0" placeholder="Enter count if returned" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Salim/unused cones weight (kg)<input id="soundConeWeightKg" name="sound_cone_weight_kg" type="number" min="0" step="0.01" placeholder="Enter weight if returned" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Cartons count<input name="carton_count" type="number" min="0" placeholder="Enter count if returned" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
+                    <label class="text-xs font-semibold">Cartons weight (kg)<input id="cartonWeightKg" name="carton_weight_kg" type="number" min="0" step="0.01" placeholder="Enter weight if returned" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label>
                 </div>
                 <div class="grid grid-cols-2 gap-3 border-t border-zinc-200 pt-3"><div class="rounded-xl bg-white p-3"><span class="text-[10px] font-bold uppercase text-zinc-500">Total deductions</span><strong id="finalDeductionsPreview" class="mt-1 block font-mono text-lg">0.00 kg</strong></div><label class="text-xs font-semibold">Sizing rate (Rs. / kg)<input id="sizingRatePerKg" name="sizing_rate_per_kg" type="number" min="0" step="0.01" placeholder="61.00" oninput="updateFinalPerchPreview()" class="mt-1 w-full rounded-xl border px-3 py-2"></label></div>
                 <div class="rounded-xl bg-zinc-900 p-3 text-white"><div class="flex justify-between text-xs"><span>Net yarn weight</span><strong id="finalNetWeightPreview">0.00 kg</strong></div><div class="mt-2 flex justify-between border-t border-white/20 pt-2 text-sm"><span>Sizing bill</span><strong id="finalBillPreview">Rs. 0.00</strong></div></div>
@@ -963,9 +966,8 @@
         document.getElementById('inpBagsHeld').value = 0;
         document.getElementById('inpSizingGrossWeightKg').value = '';
         document.getElementById('inpSizingWeightKg').value = '';
-        ['wetConeWeightKg', 'emptyBagWeightKg', 'paperBagWeightKg', 'soundConeWeightKg', 'cartonWeightKg'].forEach((id) => {
-            const field = document.getElementById(id);
-            if (field) field.value = '0';
+        document.querySelectorAll('#finalPerchFields input').forEach((field) => {
+            field.value = '';
         });
         updateSizingWeightPreview();
         updateSizingCountPreview();
@@ -985,6 +987,8 @@
             : 'Enter the net warp yarn weight from the bill. The gross weight is optional for Raw Perch.';
         if (isFinal) {
             updateFinalPerchPreview();
+        } else {
+            updateSizingCountPreview();
         }
     }
 
@@ -1008,11 +1012,11 @@
     }
 
     function calculateSizingBags() {
-        const allocated = parseInt(document.getElementById('inpBagsAllocated').value) || 0;
-        const used = parseInt(document.getElementById('inpBagsUsed').value) || 0;
-        const returned = parseInt(document.getElementById('inpBagsReturned').value) || 0;
-        const held = parseInt(document.getElementById('inpBagsHeld').value) || 0;
-        const variance = allocated - used - returned - held;
+        const allocated = parseFloat(document.getElementById('inpBagsAllocated').value) || 0;
+        const used = parseFloat(document.getElementById('inpBagsUsed').value) || 0;
+        const returned = parseFloat(document.getElementById('inpBagsReturned').value) || 0;
+        const held = parseFloat(document.getElementById('inpBagsHeld').value) || 0;
+        const variance = Math.round((allocated - used - returned - held) * 100);
         const status = document.getElementById('sizingBagStatus');
         const button = document.getElementById('btnSubmitSizingSlip');
         const fill = document.getElementById('bagBalanceFill');
@@ -1024,15 +1028,15 @@
             status.className = 'text-xs font-bold font-mono text-zinc-400';
             fill.className = 'h-full rounded-full bg-zinc-300 transition-all duration-300';
         } else if (variance === 0) {
-            status.innerText = `Balanced: ${used} used + ${returned} returned + ${held} held = ${allocated}`;
+            status.innerText = `Balanced: ${used.toFixed(2)} used + ${returned.toFixed(2)} returned + ${held.toFixed(2)} held = ${allocated.toFixed(2)}`;
             status.className = 'text-xs font-bold font-mono text-emerald-700';
             fill.className = 'h-full rounded-full bg-emerald-600 transition-all duration-300';
         } else if (variance > 0) {
-            status.innerText = `${variance} bag(s) not accounted for`;
+            status.innerText = `${(variance / 100).toFixed(2)} bag(s) not accounted for`;
             status.className = 'text-xs font-bold font-mono text-amber-700';
             fill.className = 'h-full rounded-full bg-amber-500 transition-all duration-300';
         } else {
-            status.innerText = `${Math.abs(variance)} bag(s) over-reported`;
+            status.innerText = `${(Math.abs(variance) / 100).toFixed(2)} bag(s) over-reported`;
             status.className = 'text-xs font-bold font-mono text-red-700';
             fill.className = 'h-full rounded-full bg-red-500 transition-all duration-300';
         }
@@ -1057,21 +1061,25 @@
     }
 
     function updateSizingCountPreview() {
-        const endsInput = parseFloat(document.getElementById('inpTotalEnds').value) || 0;
-        const ends = endsInput;
-        const length = parseFloat(document.getElementById('inpSetLength').value) || 0;
-        const lengthMeters = length * (document.getElementById('selectSetLengthUnit').value === 'gaz' ? 0.9144 : 1);
-        const weightKg = parseFloat(document.getElementById('inpSizingWeightKg').value) || 0;
+        const ends = parseFloat(document.getElementById('inpTotalEnds').value) || 0;
+        const setLength = parseFloat(document.getElementById('inpSetLength').value) || 0;
+        const lengthMeters = setLength * (document.getElementById('selectSetLengthUnit').value === 'gaz' ? 0.9144 : 1);
+        const netWeightKg = parseFloat(document.getElementById('inpSizingWeightKg').value) || 0;
         const preview = document.getElementById('sizingCountPreview');
-        if (!ends || !lengthMeters || !weightKg) {
-            preview.innerText = 'Warp count estimate needs ends, set length, and net weight.';
+
+        if (!ends || !lengthMeters || !netWeightKg) {
+            preview.innerText = 'Enter total ends, set length, and net weight to estimate yarn count.';
             return;
         }
-        const estimatedCount = (ends * lengthMeters) / (1693.6 * weightKg);
+
+        const estimatedCount = (ends * lengthMeters) / (1693.6 * netWeightKg);
         const quality = document.getElementById('inpYarnQuality').value;
-        const declared = quality.match(/\d+(?:\.\d+)?/);
-        const comparison = declared ? ` · declared ${declared[0]} Ne · difference ${(estimatedCount - parseFloat(declared[0])).toFixed(2)} Ne` : '';
-        preview.innerText = `Estimated warp count: ${estimatedCount.toFixed(2)} Ne${comparison}. Reconciliation estimate only; verify with a lab test.`;
+        const declaredCount = quality.match(/\d+(?:\.\d+)?/);
+        const comparison = declaredCount
+            ? ` · declared count ${declaredCount[0]} · difference ${(estimatedCount - parseFloat(declaredCount[0])).toFixed(2)}`
+            : '';
+
+        preview.innerText = `Estimated warp count: ${estimatedCount.toFixed(2)}${comparison}. Reconciliation estimate only; verify with a lab test.`;
     }
 
     function openMountModal(button) {

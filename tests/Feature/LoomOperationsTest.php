@@ -171,6 +171,107 @@ class LoomOperationsTest extends TestCase
         $this->assertEquals(5120.64, (float) SizingBeam::first()->total_length_meters);
     }
 
+    public function test_sizing_slip_accepts_fractional_bag_usage_and_returns_fractional_stock(): void
+    {
+        $bagTransaction = BagTransaction::create([
+            'transaction_type' => 'purchase_sizing',
+            'reference_no' => 'CH-FRACTIONAL-1',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 52,
+            'source' => 'Test Spinning Mill',
+            'destination' => 'Kohinoor Sizing',
+            'party_name' => 'Kohinoor Sizing',
+            'transaction_date' => now()->toDateString(),
+        ]);
+
+        $response = $this->actingAs($this->user)->post(route('sizing.slip.store'), [
+            'slip_no' => 'SZ-FRACTIONAL-1',
+            'slip_type' => 'raw_perch',
+            'sizing_party' => 'Kohinoor Sizing',
+            'yarn_quality' => '40/1 Cotton',
+            'bags_allocated' => 52,
+            'bags_used' => 51.5,
+            'bags_returned_to_factory' => 0.5,
+            'bags_held_with_sizing' => 0,
+            'total_beams' => 1,
+            'width_multiplier' => 1,
+            'set_length_value' => 1000,
+            'set_length_unit' => 'meters',
+            'total_ends' => 10080,
+            'bag_transaction_id' => $bagTransaction->id,
+            'slip_date' => now()->toDateString(),
+        ]);
+
+        $response->assertRedirect(route('sizing.index'));
+        $response->assertSessionHas('success');
+
+        $slip = SizingSlip::where('slip_no', 'SZ-FRACTIONAL-1')->firstOrFail();
+        $this->assertSame(52.0, (float) $slip->bags_allocated);
+        $this->assertSame(51.5, (float) $slip->bags_used);
+        $this->assertSame(0.5, (float) $slip->bags_returned_to_factory);
+
+        $returnedTransaction = BagTransaction::where('transaction_type', 'return_from_sizing')->firstOrFail();
+        $this->assertSame(0.5, (float) $returnedTransaction->quantity_bags);
+
+        $this->actingAs($this->user)
+            ->get(route('bags.index'))
+            ->assertOk()
+            ->assertSee('0.50 bags');
+    }
+
+    public function test_blank_final_perch_returned_material_fields_are_saved_as_zero(): void
+    {
+        $bagTransaction = BagTransaction::create([
+            'transaction_type' => 'purchase_sizing',
+            'reference_no' => 'CH-FINAL-BLANK-1',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 52,
+            'source' => 'Test Spinning Mill',
+            'destination' => 'Kohinoor Sizing',
+            'party_name' => 'Kohinoor Sizing',
+            'transaction_date' => now()->toDateString(),
+        ]);
+
+        $response = $this->actingAs($this->user)->post(route('sizing.slip.store'), [
+            'slip_no' => 'SZ-FINAL-BLANK-1',
+            'slip_type' => 'final_perch',
+            'sizing_party' => 'Kohinoor Sizing',
+            'yarn_quality' => '40/1 Cotton',
+            'bags_allocated' => 52,
+            'bags_used' => 52,
+            'bags_returned_to_factory' => 0,
+            'bags_held_with_sizing' => 0,
+            'total_beams' => 1,
+            'width_multiplier' => 1,
+            'set_length_value' => 1000,
+            'set_length_unit' => 'meters',
+            'total_ends' => 10080,
+            'sizing_gross_weight_kg' => 2550,
+            'sizing_rate_per_kg' => 61,
+            'bag_transaction_id' => $bagTransaction->id,
+            'slip_date' => now()->toDateString(),
+        ]);
+
+        $response->assertRedirect(route('sizing.index'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('sizing_slips', [
+            'slip_no' => 'SZ-FINAL-BLANK-1',
+            'wet_cone_bags' => 0,
+            'wet_cone_weight_kg' => 0,
+            'empty_bag_count' => 0,
+            'empty_bag_weight_kg' => 0,
+            'paper_bag_count' => 0,
+            'paper_bag_weight_kg' => 0,
+            'sound_cone_count' => 0,
+            'sound_cone_weight_kg' => 0,
+            'carton_count' => 0,
+            'carton_weight_kg' => 0,
+            'returned_materials_weight_kg' => 0,
+            'sizing_weight_pounds' => round(2550 / 0.45359237, 2),
+        ]);
+    }
+
     public function test_part_issuance_decrements_store_stock(): void
     {
         $part = Part::create([

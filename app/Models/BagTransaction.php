@@ -24,7 +24,7 @@ class BagTransaction extends Model
 
     protected $casts = [
         'transaction_date' => 'date',
-        'quantity_bags' => 'integer',
+        'quantity_bags' => 'decimal:2',
     ];
 
     public function sizingSlip(): HasOne

@@ -53,10 +53,10 @@ class SizingSlip extends Model
 
     protected $casts = [
         'slip_date' => 'date',
-        'bags_allocated' => 'integer',
-        'bags_used' => 'integer',
-        'bags_returned_to_factory' => 'integer',
-        'bags_held_with_sizing' => 'integer',
+        'bags_allocated' => 'decimal:2',
+        'bags_used' => 'decimal:2',
+        'bags_returned_to_factory' => 'decimal:2',
+        'bags_held_with_sizing' => 'decimal:2',
         'total_beams' => 'integer',
         'back_beam_count' => 'integer',
         'total_length_meters' => 'decimal:2',

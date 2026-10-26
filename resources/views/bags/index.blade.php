@@ -178,7 +178,7 @@
                 <span>Factory Stock Store</span>
                 <span class="w-2 h-2 rounded-full bg-zinc-700"></span>
             </div>
-            <div class="text-2xl font-black text-zinc-900 mt-1">{{ number_format($factoryStoreStock) }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
+            <div class="text-2xl font-black text-zinc-900 mt-1">{{ number_format((float) $factoryStoreStock, 2) }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
             <div class="text-[11px] text-zinc-500 mt-1">Ready in Mill Godown</div>
         </div>
 
@@ -187,7 +187,7 @@
                 <span>With Sizing Persons</span>
                 <span class="w-2 h-2 rounded-full bg-zinc-600"></span>
             </div>
-            <div class="text-2xl font-black text-zinc-900 mt-1">{{ number_format($sizingStockRemaining) }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
+            <div class="text-2xl font-black text-zinc-900 mt-1">{{ number_format((float) $sizingStockRemaining, 2) }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
             <div class="text-[11px] text-zinc-500 mt-1">Allocated to Sizing Mills</div>
         </div>
 
@@ -196,7 +196,7 @@
                 <span>Bags Used In Beams</span>
                 <span class="w-2 h-2 rounded-full bg-zinc-600"></span>
             </div>
-            <div class="text-2xl font-black text-zinc-900 mt-1">{{ number_format($totalBagsUsedInBeams) }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
+            <div class="text-2xl font-black text-zinc-900 mt-1">{{ number_format((float) $totalBagsUsedInBeams, 2) }} <span class="text-xs font-normal text-zinc-400">bags</span></div>
             <div class="text-[11px] text-zinc-500 mt-1">Converted to Sizing Beams</div>
         </div>
 
@@ -206,8 +206,8 @@
                 <span class="w-2 h-2 rounded-full bg-zinc-500"></span>
             </div>
             <div class="text-xs font-bold text-zinc-800 mt-1">
-                <div class="flex justify-between py-0.5"><span class="text-zinc-500">Returned:</span> <span class="font-mono">{{ $unusedBagsReturned }} bags</span></div>
-                <div class="flex justify-between py-0.5"><span class="text-zinc-500">Held in Sizing:</span> <span class="font-mono">{{ $unusedBagsHeldWithSizing }} bags</span></div>
+                <div class="flex justify-between py-0.5"><span class="text-zinc-500">Returned:</span> <span class="font-mono">{{ number_format((float) $unusedBagsReturned, 2) }} bags</span></div>
+                <div class="flex justify-between py-0.5"><span class="text-zinc-500">Held in Sizing:</span> <span class="font-mono">{{ number_format((float) $unusedBagsHeldWithSizing, 2) }} bags</span></div>
             </div>
         </div>
     </div>
@@ -345,7 +345,7 @@
                             </td>
                             <td class="px-4 py-3 font-mono font-semibold text-zinc-900">{{ $tx->reference_no ?? '-' }}</td>
                             <td class="px-4 py-3 font-medium text-zinc-700">{{ $tx->quality }}</td>
-                            <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">{{ $tx->quantity_bags }} Bags</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">{{ number_format((float) $tx->quantity_bags, 2) }} Bags</td>
                             <td class="px-4 py-3 text-zinc-500">{{ $tx->source }}</td>
                             <td class="px-4 py-3 text-zinc-700 font-semibold">{{ $tx->destination }}</td>
                             <td class="px-4 py-3 text-zinc-600">{{ $tx->party_name ?? '-' }}</td>
@@ -419,10 +419,10 @@
                             <td class="px-4 py-3 font-mono font-bold text-zinc-900">{{ $slip->slip_no }}</td>
                             <td class="px-4 py-3 font-semibold text-zinc-800">{{ $slip->sizing_party }}</td>
                             <td class="px-4 py-3 text-zinc-600">{{ $slip->yarn_quality }}</td>
-                            <td class="px-4 py-3 text-center font-bold text-zinc-900 font-mono">{{ $slip->bags_allocated }}</td>
-                            <td class="px-4 py-3 text-center font-black text-zinc-900 bg-zinc-50 border-x border-zinc-200 font-mono">{{ $slip->bags_used }}</td>
-                            <td class="px-4 py-3 text-center font-bold text-zinc-700 bg-zinc-50 border-r border-zinc-200 font-mono">{{ $slip->bags_returned_to_factory }}</td>
-                            <td class="px-4 py-3 text-center font-bold text-zinc-700 bg-zinc-50 border-r border-zinc-200 font-mono">{{ $slip->bags_held_with_sizing }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-900 font-mono">{{ number_format((float) $slip->bags_allocated, 2) }}</td>
+                            <td class="px-4 py-3 text-center font-black text-zinc-900 bg-zinc-50 border-x border-zinc-200 font-mono">{{ number_format((float) $slip->bags_used, 2) }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-700 bg-zinc-50 border-r border-zinc-200 font-mono">{{ number_format((float) $slip->bags_returned_to_factory, 2) }}</td>
+                            <td class="px-4 py-3 text-center font-bold text-zinc-700 bg-zinc-50 border-r border-zinc-200 font-mono">{{ number_format((float) $slip->bags_held_with_sizing, 2) }}</td>
                             <td class="px-4 py-3 text-center font-bold text-zinc-700">{{ $slip->total_beams }} Beams ({{ number_format($slip->total_length_meters) }}m)</td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
@@ -567,7 +567,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-zinc-600 mb-1">Quantity (Bags) *</label>
-                    <input type="number" id="inpIssueBags" name="quantity_bags" required min="1" max="{{ $factoryStoreStock }}" placeholder="10" oninput="updateIssueBagWeight()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    <input type="number" id="inpIssueBags" name="quantity_bags" required min="0.01" step="0.01" max="{{ $factoryStoreStock }}" placeholder="10" oninput="updateIssueBagWeight()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     <span class="text-[10px] text-zinc-500">In Godown: {{ $factoryStoreStock }} bags · <span id="displayIssueBagWeight">0.00 kg</span></span>
                 </div>
             </div>
@@ -626,7 +626,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-zinc-600 mb-1">Quantity Returned (Bags) *</label>
-                    <input type="number" name="quantity_bags" required min="1" placeholder="5" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    <input type="number" name="quantity_bags" required min="0.01" step="0.01" placeholder="5" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
             </div>
             <div>
@@ -675,7 +675,7 @@
     }
 
     function updateIssueBagWeight() {
-        const bags = parseInt(document.getElementById('inpIssueBags').value) || 0;
+        const bags = parseFloat(document.getElementById('inpIssueBags').value) || 0;
         document.getElementById('displayIssueBagWeight').innerText = `${(bags * 45.359237).toFixed(2)} kg (${(bags * 100).toLocaleString()} lb)`;
     }
 

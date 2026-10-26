@@ -127,10 +127,10 @@ class SizingController extends Controller
             'slip_type' => 'required|in:raw_perch,final_perch',
             'sizing_party' => 'required|string|max:150',
             'yarn_quality' => 'required|string|exists:yarn_qualities,name',
-            'bags_allocated' => 'required|integer|min:1',
-            'bags_used' => 'required|integer|min:0',
-            'bags_returned_to_factory' => 'required|integer|min:0',
-            'bags_held_with_sizing' => 'required|integer|min:0',
+            'bags_allocated' => 'required|numeric|min:0.01|decimal:0,2',
+            'bags_used' => 'required|numeric|min:0|decimal:0,2',
+            'bags_returned_to_factory' => 'required|numeric|min:0|decimal:0,2',
+            'bags_held_with_sizing' => 'required|numeric|min:0|decimal:0,2',
             'total_beams' => 'required|integer|min:1|max:100',
             'back_beam_count' => 'nullable|integer|min:1|max:1000',
             'width_multiplier' => 'required|numeric|min:0.01|max:100',
@@ -181,6 +181,14 @@ class SizingController extends Controller
                 ]);
             }
             $validated['sizing_bill_amount'] = round($validated['sizing_weight_kg'] * (float) $validated['sizing_rate_per_kg'], 2);
+            foreach ([
+                'wet_cone_bags', 'empty_bag_count', 'paper_bag_count', 'sound_cone_count', 'carton_count',
+            ] as $field) {
+                $validated[$field] = (int) ($validated[$field] ?? 0);
+            }
+            foreach ($deductionFields as $field) {
+                $validated[$field] = round((float) ($validated[$field] ?? 0), 2);
+            }
         } else {
             $validated['returned_materials_weight_kg'] = 0;
             $validated['sizing_bill_amount'] = null;
@@ -283,9 +291,15 @@ class SizingController extends Controller
         $beamCount = (int) $slip->total_beams;
         $meterPerBeam = round($slip->total_length_meters / $beamCount, 2);
 
-        $bagVariance = $slip->bags_allocated - $slip->bags_used - $slip->bags_returned_to_factory - $slip->bags_held_with_sizing;
+        $bagVariance = round(
+            (float) $slip->bags_allocated
+                - (float) $slip->bags_used
+                - (float) $slip->bags_returned_to_factory
+                - (float) $slip->bags_held_with_sizing,
+            2
+        );
         $bagNotice = $bagVariance > 0
-            ? " Bag check: {$bagVariance} bag(s) are unaccounted for."
+            ? ' Bag check: '.number_format($bagVariance, 2).' bag(s) are unaccounted for.'
             : ($bagVariance < 0 ? ' Bag check: recorded used/returned/held bags exceed the amount sent.' : ' Bag check balanced.');
 
         return redirect()->route('sizing.index')

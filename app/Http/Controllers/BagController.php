@@ -192,7 +192,7 @@ class BagController extends Controller
         $validated = $request->validate([
             'reference_no' => 'required|string|max:100',
             'quality' => 'required|string|exists:yarn_qualities,name',
-            'quantity_bags' => 'required|integer|min:1',
+            'quantity_bags' => 'required|numeric|min:0.01|decimal:0,2',
             'destination' => 'required|string|max:150',
             'party_name' => 'required|string|max:150',
             'transaction_date' => 'required|date',
@@ -237,7 +237,7 @@ class BagController extends Controller
         $validated = $request->validate([
             'reference_no' => 'required|string|max:100',
             'quality' => 'required|string|exists:yarn_qualities,name',
-            'quantity_bags' => 'required|integer|min:1',
+            'quantity_bags' => 'required|numeric|min:0.01|decimal:0,2',
             'source' => 'required|string|max:150',
             'party_name' => 'required|string|max:150',
             'transaction_date' => 'required|date',

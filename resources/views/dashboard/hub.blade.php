@@ -35,11 +35,11 @@
                 <div class="mt-6 pt-4 border-t border-zinc-100 grid grid-cols-2 gap-2 text-xs">
                     <div>
                         <span class="text-[10px] uppercase text-zinc-400 font-semibold block">Factory Godown</span>
-                        <strong class="text-zinc-900 text-sm font-bold">{{ number_format($factoryBagStock) }} Bags</strong>
+                        <strong class="text-zinc-900 text-sm font-bold">{{ number_format((float) $factoryBagStock, 2) }} Bags</strong>
                     </div>
                     <div>
                         <span class="text-[10px] uppercase text-zinc-400 font-semibold block">At Sizing Mills</span>
-                        <strong class="text-zinc-600 text-sm font-bold">{{ number_format($sizingBagsInHand) }} Bags</strong>
+                        <strong class="text-zinc-600 text-sm font-bold">{{ number_format((float) $sizingBagsInHand, 2) }} Bags</strong>
                     </div>
                 </div>
                 <div class="mt-4 flex items-center justify-between text-xs font-bold text-zinc-500 group-hover:translate-x-1 transition-transform">
