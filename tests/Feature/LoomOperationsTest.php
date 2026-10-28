@@ -360,6 +360,7 @@ class LoomOperationsTest extends TestCase
         $this->assertEquals(3690.00, $beam->fresh()->remaining_length_meters);
         $this->assertEquals('mounted_on_loom', $beam->fresh()->status);
         $this->assertEquals(300, $fabric->fresh()->current_stock_meters);
+        $this->assertEquals(300, $fabric->fresh()->daily_received_meters);
     }
 
     public function test_sales_slip_decrements_available_fabric_stock(): void
