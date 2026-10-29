@@ -7,6 +7,25 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## LoomFlow module guides
+
+These guides explain each module's purpose, screens, form fields, calculations, workflow, routes, and main implementation files:
+
+- [End-to-end operations roadmap](./ROADMAP.md)
+- [Authentication](./AUTH_MODULE_README.md)
+- [Main Dashboard](./DASHBOARD_MODULE_README.md)
+- [Bags and yarn stock](./BAGS_MODULE_README.md)
+- [Shared yarn qualities](./YARN_QUALITIES_MODULE_README.md)
+- [Sizing and beams](./SIZING_MODULE_README.md)
+- [Sizing yarn-bag reconciliation and shortage](./SIZING_YARN_SHORTAGE_GUIDE.md)
+- [Parts store](./PARTS_MODULE_README.md)
+- [Fabric stock](./FABRIC_STOCK_MODULE_README.md)
+- [Sales and contracts](./SALES_MODULE_README.md)
+- [Production](./PRODUCTION_MODULE_README.md)
+- [Invoices, payments, and accounts](./INVOICES_MODULE_README.md)
+- [End-to-end expense workflow](./ROADMAP.md#8-record-operating-expenses)
+- [Party ledgers](./LEDGERS_MODULE_README.md)
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

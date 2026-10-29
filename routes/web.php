@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BagController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FabricStockController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LedgerController;
@@ -27,6 +28,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('home');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/yarn-qualities', [YarnQualityController::class, 'store'])->name('yarn-qualities.store');
+
+    // Expenses (fixed schedules and variable payments)
+    Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+    Route::post('/expenses/fixed', [ExpenseController::class, 'storeFixedExpense'])->name('expenses.fixed.store');
+    Route::post('/expenses/fixed/{fixedExpense}/record', [ExpenseController::class, 'recordFixedExpense'])->name('expenses.fixed.record');
+    Route::patch('/expenses/fixed/{fixedExpense}/status', [ExpenseController::class, 'toggleFixedExpense'])->name('expenses.fixed.status');
+    Route::post('/expenses/variable', [ExpenseController::class, 'storeVariableExpense'])->name('expenses.variable.store');
 
     // 1. Bags (Yarn management, purchase split, store stock & sizing history)
     Route::get('/bags', [BagController::class, 'index'])->name('bags.index');

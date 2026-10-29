@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BagPurchase;
 use App\Models\BagTransaction;
+use App\Models\Expense;
 use App\Models\FabricStock;
 use App\Models\Part;
 use App\Models\Production;
@@ -46,6 +47,7 @@ class DashboardController extends Controller
         // 5. Sales & Contracts
         $activeContractsCount = SalesContract::where('status', 'active')->count();
         $totalSalesAmount = Sale::sum('net_total');
+        $monthExpenseTotal = Expense::whereBetween('expense_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])->sum('amount');
 
         // 6. Production & Efficiency
         $todayProductionMeters = Production::whereDate('production_date', today())->sum('net_meters_produced');
@@ -72,6 +74,7 @@ class DashboardController extends Controller
             'committedFabricMeters',
             'activeContractsCount',
             'totalSalesAmount',
+            'monthExpenseTotal',
             'todayProductionMeters',
             'totalProductionMeters',
             'avgEfficiency',

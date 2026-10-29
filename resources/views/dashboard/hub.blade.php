@@ -208,6 +208,28 @@
                 </div>
             </a>
 
+            <!-- BOX 8: EXPENSES -->
+            <a href="{{ route('expenses.index') }}" class="glass-card glass-card-hover rounded-3xl p-6 relative group overflow-hidden border border-zinc-200 bg-white">
+                <div class="flex items-start justify-between">
+                    <div class="w-14 h-14 rounded-2xl bg-zinc-100 border border-zinc-300 text-zinc-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-100 border border-zinc-300 text-zinc-600">Module 08</span>
+                </div>
+                <div class="mt-5">
+                    <h3 class="text-2xl font-black text-zinc-900 group-hover:text-zinc-600 transition-colors">Expenses</h3>
+                    <p class="text-xs text-zinc-400 mt-1 line-clamp-2">Set up recurring fixed bills and record variable factory costs with cash and bank account tracking.</p>
+                </div>
+                <div class="mt-6 border-t border-zinc-100 pt-4 text-xs">
+                    <span class="text-[10px] uppercase text-zinc-400 font-semibold block">Expenses this month</span>
+                    <strong class="text-zinc-900 text-sm font-bold">Rs. {{ number_format((float) $monthExpenseTotal, 2) }}</strong>
+                </div>
+                <div class="mt-4 flex items-center justify-between text-xs font-bold text-zinc-500 group-hover:translate-x-1 transition-transform">
+                    <span>Manage Fixed & Variable Expenses</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </div>
+            </a>
+
         </div>
     </div>
 
