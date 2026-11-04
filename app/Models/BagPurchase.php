@@ -27,8 +27,8 @@ class BagPurchase extends Model
         'purchase_date' => 'date',
         'rate_per_bag' => 'decimal:2',
         'total_amount' => 'decimal:2',
-        'total_bags' => 'integer',
-        'bags_to_sizing' => 'integer',
-        'bags_to_factory' => 'integer',
+        'total_bags' => 'decimal:2',
+        'bags_to_sizing' => 'decimal:2',
+        'bags_to_factory' => 'decimal:2',
     ];
 }

@@ -60,6 +60,66 @@ class LoomOperationsTest extends TestCase
         ]);
     }
 
+    public function test_bag_purchase_accepts_fractional_bags_and_keeps_all_records_in_sync(): void
+    {
+        $response = $this->actingAs($this->user)->post(route('bags.purchase'), [
+            'challan_no' => 'CH-FRACTIONAL-PURCHASE',
+            'supplier_name' => 'Test Spinning Mill',
+            'quality' => '30/1 PC Combed',
+            'total_bags' => 10.5,
+            'bags_to_sizing' => 6.25,
+            'bags_to_factory' => 4.25,
+            'sizing_destination' => 'Test Sizing Mill',
+            'rate_per_bag' => 14000.50,
+            'purchase_date' => now()->toDateString(),
+        ]);
+
+        $response->assertRedirect(route('bags.index'));
+        $this->assertDatabaseHas('bag_purchases', [
+            'challan_no' => 'CH-FRACTIONAL-PURCHASE',
+            'total_bags' => 10.5,
+            'bags_to_sizing' => 6.25,
+            'bags_to_factory' => 4.25,
+            'total_amount' => 147005.25,
+        ]);
+        $this->assertDatabaseHas('bag_transactions', [
+            'reference_no' => 'CH-FRACTIONAL-PURCHASE',
+            'transaction_type' => 'purchase_factory',
+            'quantity_bags' => 4.25,
+        ]);
+        $this->assertDatabaseHas('bag_transactions', [
+            'reference_no' => 'CH-FRACTIONAL-PURCHASE',
+            'transaction_type' => 'purchase_sizing',
+            'quantity_bags' => 6.25,
+        ]);
+        $this->assertDatabaseHas('ledgers', [
+            'voucher_no' => 'CH-FRACTIONAL-PURCHASE',
+            'credit' => 147005.25,
+        ]);
+    }
+
+    public function test_new_yarn_quality_saves_its_fabric_specification_and_truncated_weight_calculation(): void
+    {
+        $response = $this->actingAs($this->user)->post(route('yarn-qualities.store'), [
+            'name' => '60 Read Quality',
+            'construction' => '60x58 / 63 inch',
+            'read' => 60,
+            'pick' => 58,
+            'warp_count' => 58.5,
+            'weft_count' => 60,
+            'width_inches' => 63,
+            'unit_cost_meter' => 125.75,
+        ]);
+
+        $response->assertRedirect();
+        $quality = YarnQuality::where('name', '60 Read Quality')->firstOrFail();
+        $this->assertSame('60x58 / 63 inch', $quality->construction);
+        $this->assertSame(125.75, (float) $quality->unit_cost_meter);
+        $this->assertSame(0.0883, (float) $quality->warp_weight_per_meter_lb);
+        $this->assertSame(0.0832, (float) $quality->weft_weight_per_meter_lb);
+        $this->assertSame(0.1715, (float) $quality->total_weight_per_meter_lb);
+    }
+
     public function test_sizing_slip_creates_beams_and_tracks_returned_bags(): void
     {
         $bagTransaction = BagTransaction::create([
@@ -74,6 +134,7 @@ class LoomOperationsTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->user)->post(route('sizing.slip.store'), [
+            'slip_type' => 'raw_perch',
             'slip_no' => 'SZ-TEST-10',
             'sizing_party' => 'Kohinoor Sizing',
             'yarn_quality' => '40/1 Cotton',
@@ -82,6 +143,7 @@ class LoomOperationsTest extends TestCase
             'bags_returned_to_factory' => 3,
             'bags_held_with_sizing' => 2,
             'total_beams' => 3,
+            'beam_names' => ['Beam A', 'Beam B', 'Beam C'],
             'back_beam_count' => 5,
             'width_multiplier' => 2,
             'set_length_value' => 12000.00,
@@ -121,6 +183,204 @@ class LoomOperationsTest extends TestCase
         ]);
     }
 
+    public function test_beam_lengths_preserve_the_exact_set_total_and_each_beam_keeps_its_slip_quality(): void
+    {
+        $firstReceipt = BagTransaction::create([
+            'transaction_type' => 'purchase_sizing',
+            'reference_no' => 'CH-BEAM-A',
+            'quality' => '30/1 PC Combed',
+            'quantity_bags' => 20,
+            'source' => 'Test Spinning Mill',
+            'destination' => 'Sizing Mill A',
+            'party_name' => 'Sizing Mill A',
+            'transaction_date' => now()->toDateString(),
+        ]);
+        $secondReceipt = BagTransaction::create([
+            'transaction_type' => 'purchase_sizing',
+            'reference_no' => 'CH-BEAM-B',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 20,
+            'source' => 'Test Spinning Mill',
+            'destination' => 'Sizing Mill B',
+            'party_name' => 'Sizing Mill B',
+            'transaction_date' => now()->toDateString(),
+        ]);
+
+        foreach ([[$firstReceipt, 'SZ-BEAM-A'], [$secondReceipt, 'SZ-BEAM-B']] as [$receipt, $slipNumber]) {
+            $response = $this->actingAs($this->user)->post(route('sizing.slip.store'), [
+                'slip_no' => $slipNumber,
+                'slip_type' => 'raw_perch',
+                'sizing_party' => 'Ignored form party',
+                'yarn_quality' => '30/1 PC Combed',
+                'bags_allocated' => 20,
+                'bags_used' => 20,
+                'bags_returned_to_factory' => 0,
+                'bags_held_with_sizing' => 0,
+                'total_beams' => 4,
+                'beam_names' => ['A', 'B', 'C', 'D'],
+                'width_multiplier' => 1,
+                'set_length_value' => 1000,
+                'set_length_unit' => 'meters',
+                'total_ends' => 1000,
+                'bag_transaction_id' => $receipt->id,
+                'slip_date' => now()->toDateString(),
+            ]);
+
+            $response->assertRedirect(route('sizing.index'));
+        }
+
+        $firstSlip = SizingSlip::where('slip_no', 'SZ-BEAM-A')->firstOrFail();
+        $secondSlip = SizingSlip::where('slip_no', 'SZ-BEAM-B')->firstOrFail();
+        $this->assertSame('30/1 PC Combed', $firstSlip->yarn_quality);
+        $this->assertSame('40/1 Cotton', $secondSlip->yarn_quality);
+        $this->assertSame(1000.0, (float) $firstSlip->beams()->sum('total_length_meters'));
+        $this->assertSame(1000.0, (float) $secondSlip->beams()->sum('total_length_meters'));
+        $this->assertSame([250.0, 250.0, 250.0, 250.0], $firstSlip->beams()->orderBy('id')->pluck('total_length_meters')->map(fn ($length): float => (float) $length)->all());
+        $this->assertSame(['30/1 PC Combed'], $firstSlip->beams()->distinct()->pluck('yarn_quality')->all());
+        $this->assertSame(['40/1 Cotton'], $secondSlip->beams()->distinct()->pluck('yarn_quality')->all());
+    }
+
+    public function test_beam_lengths_distribute_centimeter_remainders_without_losing_set_length(): void
+    {
+        $receipt = BagTransaction::create([
+            'transaction_type' => 'purchase_sizing',
+            'reference_no' => 'CH-BEAM-REMAINDER',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 10,
+            'source' => 'Test Spinning Mill',
+            'destination' => 'Sizing Mill',
+            'party_name' => 'Sizing Mill',
+            'transaction_date' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($this->user)->post(route('sizing.slip.store'), [
+            'slip_no' => 'SZ-BEAM-REMAINDER',
+            'slip_type' => 'raw_perch',
+            'sizing_party' => 'Sizing Mill',
+            'yarn_quality' => '40/1 Cotton',
+            'bags_allocated' => 10,
+            'bags_used' => 10,
+            'bags_returned_to_factory' => 0,
+            'bags_held_with_sizing' => 0,
+            'total_beams' => 3,
+            'beam_names' => ['A', 'B', 'C'],
+            'width_multiplier' => 1,
+            'set_length_value' => 1000.01,
+            'set_length_unit' => 'meters',
+            'total_ends' => 1000,
+            'bag_transaction_id' => $receipt->id,
+            'slip_date' => now()->toDateString(),
+        ])->assertRedirect(route('sizing.index'));
+
+        $slip = SizingSlip::where('slip_no', 'SZ-BEAM-REMAINDER')->firstOrFail();
+        $this->assertSame([333.34, 333.34, 333.33], $slip->beams()->orderBy('id')->pluck('total_length_meters')->map(fn ($length): float => (float) $length)->all());
+        $this->assertSame(1000.01, (float) $slip->beams()->sum('total_length_meters'));
+    }
+
+    public function test_dashboard_stock_totals_are_summed_across_independent_yarn_quality_balances(): void
+    {
+        BagTransaction::create([
+            'transaction_type' => 'purchase_factory',
+            'reference_no' => 'CH-QUALITY-A',
+            'quality' => '30/1 PC Combed',
+            'quantity_bags' => 10,
+            'source' => 'Supplier',
+            'destination' => 'Factory Yarn Store',
+            'transaction_date' => now()->toDateString(),
+        ]);
+        BagTransaction::create([
+            'transaction_type' => 'purchase_factory',
+            'reference_no' => 'CH-QUALITY-B',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 2,
+            'source' => 'Supplier',
+            'destination' => 'Factory Yarn Store',
+            'transaction_date' => now()->toDateString(),
+        ]);
+        BagTransaction::create([
+            'transaction_type' => 'issue_to_sizing',
+            'reference_no' => 'ISSUE-QUALITY-A',
+            'quality' => '30/1 PC Combed',
+            'quantity_bags' => 8,
+            'source' => 'Factory Yarn Store',
+            'destination' => 'Sizing Mill',
+            'party_name' => 'Sizing Mill',
+            'transaction_date' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($this->user)->get(route('bags.index'))
+            ->assertOk()
+            ->assertSee('Stock by Yarn Quality')
+            ->assertSee('40/1 Cotton')
+            ->assertSee('2.00', false);
+    }
+
+    public function test_manual_return_requires_matching_factory_issue_and_cannot_exceed_outstanding_quantity(): void
+    {
+        BagTransaction::create([
+            'transaction_type' => 'purchase_factory',
+            'reference_no' => 'CH-RETURN-BASE',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 10,
+            'source' => 'Supplier',
+            'destination' => 'Factory Yarn Store',
+            'transaction_date' => now()->toDateString(),
+        ]);
+        BagTransaction::create([
+            'transaction_type' => 'issue_to_sizing',
+            'reference_no' => 'ISSUE-RETURN-1',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 3,
+            'source' => 'Factory Yarn Store',
+            'destination' => 'Sizing Mill',
+            'party_name' => 'Sizing Contractor',
+            'transaction_date' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($this->user)->post(route('bags.return'), [
+            'reference_no' => 'ISSUE-RETURN-1',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 3.01,
+            'source' => 'Sizing Mill',
+            'party_name' => 'Sizing Contractor',
+            'transaction_date' => now()->toDateString(),
+        ])->assertRedirect();
+        $this->assertDatabaseMissing('bag_transactions', ['transaction_type' => 'return_from_sizing']);
+
+        $this->actingAs($this->user)->post(route('bags.return'), [
+            'reference_no' => 'ISSUE-RETURN-1',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 2.5,
+            'source' => 'Sizing Mill',
+            'party_name' => 'Sizing Contractor',
+            'transaction_date' => now()->toDateString(),
+        ])->assertRedirect(route('bags.index'));
+        $this->assertDatabaseHas('bag_transactions', [
+            'transaction_type' => 'return_from_sizing',
+            'reference_no' => 'ISSUE-RETURN-1',
+            'quantity_bags' => 2.5,
+        ]);
+
+        $this->actingAs($this->user)->post(route('bags.return'), [
+            'reference_no' => 'ISSUE-RETURN-1',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 0.5,
+            'source' => 'Sizing Mill',
+            'party_name' => 'Sizing Contractor',
+            'transaction_date' => now()->toDateString(),
+        ])->assertRedirect(route('bags.index'));
+
+        $this->actingAs($this->user)->post(route('bags.return'), [
+            'reference_no' => 'ISSUE-RETURN-1',
+            'quality' => '40/1 Cotton',
+            'quantity_bags' => 0.01,
+            'source' => 'Sizing Mill',
+            'party_name' => 'Sizing Contractor',
+            'transaction_date' => now()->toDateString(),
+        ])->assertRedirect();
+        $this->assertSame(3.0, (float) BagTransaction::where('transaction_type', 'return_from_sizing')->sum('quantity_bags'));
+    }
+
     public function test_sizing_slip_records_unaccounted_bags_instead_of_blocking_the_slip(): void
     {
         $bagTransaction = BagTransaction::create([
@@ -135,6 +395,7 @@ class LoomOperationsTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->user)->post(route('sizing.slip.store'), [
+            'slip_type' => 'raw_perch',
             'slip_no' => 'SZ-GATE-PASS-98',
             'sizing_party' => 'Kohinoor Sizing',
             'yarn_quality' => '40/1 Cotton',
@@ -143,6 +404,7 @@ class LoomOperationsTest extends TestCase
             'bags_returned_to_factory' => 0,
             'bags_held_with_sizing' => 0,
             'total_beams' => 4,
+            'beam_names' => ['Beam A', 'Beam B', 'Beam C', 'Beam D'],
             'back_beam_count' => 5,
             'width_multiplier' => 2,
             'set_length_value' => 22400,
@@ -194,6 +456,7 @@ class LoomOperationsTest extends TestCase
             'bags_returned_to_factory' => 0.5,
             'bags_held_with_sizing' => 0,
             'total_beams' => 1,
+            'beam_names' => ['Beam A'],
             'width_multiplier' => 1,
             'set_length_value' => 1000,
             'set_length_unit' => 'meters',
@@ -242,6 +505,7 @@ class LoomOperationsTest extends TestCase
             'bags_returned_to_factory' => 0,
             'bags_held_with_sizing' => 0,
             'total_beams' => 1,
+            'beam_names' => ['Beam A'],
             'width_multiplier' => 1,
             'set_length_value' => 1000,
             'set_length_unit' => 'meters',

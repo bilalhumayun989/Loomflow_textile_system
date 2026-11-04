@@ -211,6 +211,24 @@
             </div>
         </div>
     </div>
+    <div class="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <div class="mb-3">
+            <h2 class="text-sm font-extrabold text-zinc-900">Stock by Yarn Quality</h2>
+            <p class="mt-1 text-[11px] text-zinc-500">Each quality is balanced separately across the factory store and sizing mills.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[520px] text-xs">
+                <thead><tr class="border-b border-zinc-100 text-left text-[10px] uppercase tracking-wide text-zinc-400"><th class="py-2 pr-3">Yarn quality</th><th class="px-3 py-2 text-right">Factory stock</th><th class="px-3 py-2 text-right">With sizing</th><th class="py-2 pl-3 text-right">Total remaining</th></tr></thead>
+                <tbody>
+                    @forelse($qualityBalances as $balance)
+                        <tr class="border-b border-zinc-50 last:border-0"><td class="py-2.5 pr-3 font-semibold text-zinc-800">{{ $balance['name'] }}</td><td class="px-3 py-2.5 text-right font-mono">{{ number_format($balance['factory_stock'], 2) }}</td><td class="px-3 py-2.5 text-right font-mono">{{ number_format($balance['sizing_stock'], 2) }}</td><td class="py-2.5 pl-3 text-right font-mono font-bold">{{ number_format($balance['total'], 2) }}</td></tr>
+                    @empty
+                        <tr><td colspan="4" class="py-4 text-center text-zinc-400">Create a yarn quality to start tracking stock.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
     @endif
 
     {{-- ============================================================
@@ -265,12 +283,12 @@
                             <td class="px-4 py-3 text-zinc-500">{{ $p->purchase_date->format('d M, Y') }}</td>
                             <td class="px-4 py-3 font-semibold text-zinc-800">{{ $p->supplier_name }}</td>
                             <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700 font-mono text-[11px]">{{ $p->quality }}</span></td>
-                            <td class="px-4 py-3 text-right font-black text-zinc-900">{{ $p->total_bags }}</td>
+                            <td class="px-4 py-3 text-right font-black text-zinc-900">{{ number_format((float) $p->total_bags, 2) }}</td>
                             <td class="px-4 py-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-x border-zinc-200">
-                                {{ $p->bags_to_sizing }}
-                                <span class="block text-[10px] font-normal text-zinc-500">{{ $p->sizing_destination ?: '—' }} · {{ number_format($p->bags_to_sizing * 45.359237, 2) }} kg</span>
+                                {{ number_format((float) $p->bags_to_sizing, 2) }}
+                                <span class="block text-[10px] font-normal text-zinc-500">{{ $p->sizing_destination ?: '—' }} · {{ number_format((float) $p->bags_to_sizing * 45.359237, 2) }} kg</span>
                             </td>
-                            <td class="px-4 py-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-r border-zinc-200">{{ $p->bags_to_factory }}</td>
+                            <td class="px-4 py-3 text-center font-bold font-mono text-zinc-800 bg-zinc-50 border-r border-zinc-200">{{ number_format((float) $p->bags_to_factory, 2) }}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-500">Rs. {{ number_format($p->rate_per_bag, 2) }}</td>
                             <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">Rs. {{ number_format($p->total_amount, 2) }}</td>
                         </tr>
@@ -495,7 +513,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-zinc-600 mb-1">Total Bags Purchased *</label>
-                    <input type="number" id="inpTotalBags" name="total_bags" required min="1" placeholder="100" oninput="calculateSplit()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    <input type="number" step="0.01" id="inpTotalBags" name="total_bags" required min="0.01" placeholder="100" oninput="calculateSplit()" class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-zinc-600 mb-1">Rate Per Bag (Rs.) *</label>
@@ -510,13 +528,13 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[11px] font-semibold text-zinc-600 mb-1">Direct to Sizing (Bags)</label>
-                        <input type="number" id="inpBagsToSizing" name="bags_to_sizing" value="0" min="0" oninput="validateSplitNumbers(); updateSizingDestination(); updateSizingBagWeight()" class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <input type="number" step="0.01" id="inpBagsToSizing" name="bags_to_sizing" value="0" min="0" oninput="validateSplitNumbers(); updateSizingDestination(); updateSizingBagWeight()" class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         <span class="text-[10px] text-zinc-400">Directly sent to sizing mill</span>
                         <span id="displaySizingBagWeight" class="block text-[10px] font-semibold text-zinc-600">0 bags · 0.00 kg / 0 lb</span>
                     </div>
                     <div>
                         <label class="block text-[11px] font-semibold text-zinc-600 mb-1">To Factory Godown (Bags)</label>
-                        <input type="number" id="inpBagsToFactory" name="bags_to_factory" value="0" min="0" oninput="validateSplitNumbers()" class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                        <input type="number" step="0.01" id="inpBagsToFactory" name="bags_to_factory" value="0" min="0" oninput="validateSplitNumbers()" class="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
                         <span class="text-[10px] text-zinc-400">Stored in mill warehouse</span>
                     </div>
                 </div>
@@ -662,7 +680,7 @@
 @push('scripts')
 <script>
     function updateSizingDestination() {
-        const quantity = parseInt(document.getElementById('inpBagsToSizing').value) || 0;
+        const quantity = parseFloat(document.getElementById('inpBagsToSizing').value) || 0;
         const wrap = document.getElementById('sizingDestinationWrap');
         const destination = document.getElementById('inpSizingDestination');
         wrap.classList.toggle('hidden', quantity <= 0);
@@ -670,7 +688,7 @@
     }
 
     function updateSizingBagWeight() {
-        const bags = parseInt(document.getElementById('inpBagsToSizing').value) || 0;
+        const bags = parseFloat(document.getElementById('inpBagsToSizing').value) || 0;
         document.getElementById('displaySizingBagWeight').innerText = `${bags} bags · ${(bags * 45.359237).toFixed(2)} kg / ${(bags * 100).toLocaleString()} lb`;
     }
 
@@ -684,7 +702,7 @@
         const sizing = parseFloat(document.getElementById('inpBagsToSizing').value) || 0;
         const factory = parseFloat(document.getElementById('inpBagsToFactory').value) || 0;
         if (sizing === 0 && factory === 0 && total > 0) {
-            const half = Math.floor(total / 2);
+            const half = Math.floor(total * 50) / 100;
             document.getElementById('inpBagsToSizing').value = half;
             document.getElementById('inpBagsToFactory').value = total - half;
         }
@@ -702,7 +720,7 @@
         const statusEl = document.getElementById('splitStatus');
         const submitBtn = document.getElementById('btnSubmitPurchase');
         document.getElementById('displayTotalAmount').innerText = 'Rs. ' + (total * rate).toLocaleString('en-US', {minimumFractionDigits: 2});
-        if (sum === total && total > 0) {
+        if (Math.round(sum * 100) === Math.round(total * 100) && total > 0) {
             statusEl.innerText = `Matched: ${sizing} Sizing + ${factory} Factory = ${total} ✓`;
             statusEl.className = 'text-xs font-bold font-mono text-zinc-700';
             submitBtn.disabled = false;

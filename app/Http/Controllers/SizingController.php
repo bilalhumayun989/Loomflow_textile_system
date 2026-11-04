@@ -257,16 +257,21 @@ class SizingController extends Controller
 
             $slip = SizingSlip::create($validated);
             $beamCount = (int) $validated['total_beams'];
-            $meterPerBeam = round($validated['total_length_meters'] / $beamCount, 2);
+            $totalLengthCentimeters = (int) round((float) $validated['total_length_meters'] * 100);
+            $baseBeamLengthCentimeters = intdiv($totalLengthCentimeters, $beamCount);
+            $remainingCentimeters = $totalLengthCentimeters % $beamCount;
             $lastBeamId = SizingBeam::max('id') ?? 100;
             for ($i = 1; $i <= $beamCount; $i++) {
+                $beamLengthCentimeters = $baseBeamLengthCentimeters + ($i <= $remainingCentimeters ? 1 : 0);
+                $beamLengthMeters = $beamLengthCentimeters / 100;
+
                 SizingBeam::create([
                     'sizing_slip_id' => $slip->id,
                     'beam_no' => 'BM-'.($lastBeamId + $i),
                     'beam_name' => trim($beamNames[$i - 1]),
                     'yarn_quality' => $slip->yarn_quality,
-                    'total_length_meters' => $meterPerBeam,
-                    'remaining_length_meters' => $meterPerBeam,
+                    'total_length_meters' => $beamLengthMeters,
+                    'remaining_length_meters' => $beamLengthMeters,
                     'status' => 'ready_in_store',
                     'notes' => "Beam {$i} of {$beamCount} from Sizing Slip {$slip->slip_no}",
                 ]);
@@ -295,7 +300,7 @@ class SizingController extends Controller
 
         $slip = $slipResult;
         $beamCount = (int) $slip->total_beams;
-        $meterPerBeam = round($slip->total_length_meters / $beamCount, 2);
+        $meterPerBeam = round((float) $slip->total_length_meters / $beamCount, 2);
 
         $bagVariance = round(
             (float) $slip->bags_allocated

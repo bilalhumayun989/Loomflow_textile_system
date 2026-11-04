@@ -274,7 +274,7 @@
                             <td class="px-4 py-3"><span class="font-mono font-bold text-zinc-900">{{ $transaction->reference_no ?: 'Bag entry #'.$transaction->id }}</span><span class="mt-0.5 block text-[10px] text-zinc-400">{{ $transaction->transaction_date->format('d M, Y') }}</span></td>
                             <td class="px-4 py-3 font-semibold text-zinc-700">{{ $sizingParty }}</td>
                             <td class="px-4 py-3 text-zinc-600">{{ $transaction->quality }}</td>
-                            <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">{{ $transaction->quantity_bags }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">{{ number_format((float) $transaction->quantity_bags, 2) }}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-600">{{ number_format($transaction->quantity_bags * $kilogramsPerBag, 2) }} kg<span class="block text-[10px] text-zinc-400">{{ number_format($transaction->quantity_bags * 100) }} lb</span></td>
                             <td class="px-4 py-3 text-right"><button type="button" onclick="openSizingSlipFromBag(this)" data-id="{{ $transaction->id }}" data-reference="{{ $transaction->reference_no }}" data-slip="{{ $sizingSlipNo }}" data-party="{{ $sizingParty }}" data-quality="{{ $transaction->quality }}" data-quantity="{{ $transaction->quantity_bags }}" data-date="{{ $transaction->transaction_date->format('Y-m-d') }}" class="rounded-lg bg-zinc-900 px-3 py-2 text-[11px] font-bold text-white hover:bg-zinc-700">Enter sizing slip</button></td>
                         </tr>
@@ -686,7 +686,7 @@
                             $sizingSlipNo = 'SZ-' . $transaction->id . '-' . date('ymd', strtotime($transaction->transaction_date));
                         @endphp
                         <option value="{{ $transaction->id }}" data-slip="{{ $sizingSlipNo }}" data-party="{{ $sizingParty }}" data-quality="{{ $transaction->quality }}" data-quantity="{{ $transaction->quantity_bags }}" data-date="{{ $transaction->transaction_date->format('Y-m-d') }}">
-                            {{ $transaction->reference_no }} · {{ $transaction->quality }} · {{ $transaction->quantity_bags }} bags · {{ $sizingParty }}
+                            {{ $transaction->reference_no }} · {{ $transaction->quality }} · {{ number_format((float) $transaction->quantity_bags, 2) }} bags · {{ $sizingParty }}
                         </option>
                     @endforeach
                 </select>
@@ -715,11 +715,11 @@
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Yarn Quality *</label>
                         <div class="flex gap-2">
-                            <select id="inpYarnQuality" name="yarn_quality" required data-yarn-quality-select
+                            <select id="inpYarnQuality" name="yarn_quality" required data-yarn-quality-select onchange="updateSizingCountPreview()"
                                     class="min-w-0 flex-1 bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                                 <option value="">Select yarn quality</option>
                                 @foreach($yarnQualities as $yarnQuality)
-                                    <option value="{{ $yarnQuality->name }}">{{ $yarnQuality->name }}</option>
+                                <option value="{{ $yarnQuality->name }}" data-warp-weight="{{ $yarnQuality->warp_weight_per_meter_lb }}" data-weft-weight="{{ $yarnQuality->weft_weight_per_meter_lb }}" data-total-weight="{{ $yarnQuality->total_weight_per_meter_lb }}" data-unit-cost="{{ $yarnQuality->unit_cost_meter }}">{{ $yarnQuality->name }}</option>
                                 @endforeach
                             </select>
                             <button type="button" onclick="openModal('modalYarnQualities')" class="shrink-0 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100">+ Create</button>
@@ -860,6 +860,7 @@
                 <div class="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
                     <span id="sizingCountPreview" class="block text-[10px] font-semibold text-zinc-700">Enter total ends, set length, and net weight to estimate yarn count.</span>
                     <span class="mt-1 block text-[10px] text-zinc-400">Estimate = ends × set length in metres ÷ (1693.6 × net kg). It is a reconciliation check and does not change the selected yarn quality.</span>
+                    <span id="sizingQualityWeightPreview" class="mt-2 block border-t border-zinc-200 pt-2 text-[10px] font-semibold text-zinc-700">Select a yarn quality with stored Read/Pick and yarn counts to preview fabric weight.</span>
                 </div>
             </div>
 
@@ -969,9 +970,9 @@
         document.getElementById('inpSlipDate').value = option.dataset.date || '';
         document.getElementById('inpSizingParty').value = option.dataset.party || '';
         document.getElementById('inpYarnQuality').value = option.dataset.quality || '';
-        const quantity = parseInt(option.dataset.quantity) || 0;
-        document.getElementById('inpBagsAllocated').value = quantity;
-        document.getElementById('inpBagsUsed').value = quantity;
+        const quantity = parseFloat(option.dataset.quantity) || 0;
+        document.getElementById('inpBagsAllocated').value = quantity.toFixed(2);
+        document.getElementById('inpBagsUsed').value = quantity.toFixed(2);
         document.getElementById('inpBagsReturned').value = 0;
         document.getElementById('inpBagsHeld').value = 0;
         document.getElementById('inpSizingGrossWeightKg').value = '';
@@ -1100,6 +1101,7 @@
         const lengthMeters = setLength * (document.getElementById('selectSetLengthUnit').value === 'gaz' ? 0.9144 : 1);
         const netWeightKg = parseFloat(document.getElementById('inpSizingWeightKg').value) || 0;
         const preview = document.getElementById('sizingCountPreview');
+        updateSizingQualityWeightPreview(lengthMeters);
 
         if (!ends || !lengthMeters || !netWeightKg) {
             preview.innerText = 'Enter total ends, set length, and net weight to estimate yarn count.';
@@ -1114,6 +1116,27 @@
             : '';
 
         preview.innerText = `Estimated warp count: ${estimatedCount.toFixed(2)}${comparison}. Reconciliation estimate only; verify with a lab test.`;
+    }
+
+    function updateSizingQualityWeightPreview(lengthMeters = null) {
+        const qualitySelect = document.getElementById('inpYarnQuality');
+        const option = qualitySelect.options[qualitySelect.selectedIndex];
+        const preview = document.getElementById('sizingQualityWeightPreview');
+        const warpWeight = parseFloat(option?.dataset.warpWeight) || 0;
+        const weftWeight = parseFloat(option?.dataset.weftWeight) || 0;
+        const totalWeight = parseFloat(option?.dataset.totalWeight) || 0;
+        const setLength = lengthMeters ?? (parseFloat(document.getElementById('inpSetLength').value) || 0)
+            * (document.getElementById('selectSetLengthUnit').value === 'gaz' ? 0.9144 : 1);
+        const widthMultiplier = parseFloat(document.getElementById('inpWidthMultiplier').value) || 1;
+
+        if (!option?.value || totalWeight <= 0) {
+            preview.innerText = 'This yarn quality has no stored weight calculation yet.';
+            return;
+        }
+
+        const expectedFabricMeters = setLength * widthMultiplier;
+        const estimatedTotalPounds = totalWeight * expectedFabricMeters;
+        preview.innerText = `Stored quality weight: warp ${warpWeight.toFixed(4)} + weft ${weftWeight.toFixed(4)} = ${totalWeight.toFixed(4)} lb/m · estimated ${estimatedTotalPounds.toFixed(2)} lb (${(estimatedTotalPounds * 0.45359237).toFixed(2)} kg) for ${expectedFabricMeters.toFixed(2)} expected fabric meters.`;
     }
 
     function openMountModal(button) {

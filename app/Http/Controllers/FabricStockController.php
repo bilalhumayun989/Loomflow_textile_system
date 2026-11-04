@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FabricStock;
 use App\Models\FabricStockMovement;
 use App\Models\SalesContract;
+use App\YarnQualityWeightCalculator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -77,7 +78,7 @@ class FabricStockController extends Controller
         ));
     }
 
-    public function storeStock(Request $request): RedirectResponse
+    public function storeStock(Request $request, YarnQualityWeightCalculator $weightCalculator): RedirectResponse
     {
         $validated = $request->validate([
             'quality_mode' => 'required|in:existing,new',
@@ -104,16 +105,14 @@ class FabricStockController extends Controller
         $received = (float) ($validated['daily_received_meters'] ?? 0);
         $adjustment = (float) ($validated['adjustment_meters'] ?? 0);
         $dispatch = (float) ($validated['dispatch_meters'] ?? 0);
-        $stock = DB::transaction(function () use ($validated, $isNew, $received, $adjustment, $dispatch): FabricStock {
+        $stock = DB::transaction(function () use ($validated, $isNew, $received, $adjustment, $dispatch, $weightCalculator): FabricStock {
             if ($isNew) {
                 $read = (float) $validated['read'];
                 $pick = (float) $validated['pick'];
                 $width = (float) $validated['width_inches'];
                 $warpCount = (float) $validated['warp_count'];
                 $weftCount = (float) $validated['weft_count'];
-                $truncateFourDecimals = static fn (float $value): float => floor(($value + 0.000000001) * 10000) / 10000;
-                $warpWeightPerMeter = $truncateFourDecimals($read * $width / $warpCount / 20 * 1.0936 / 40);
-                $weftWeightPerMeter = $truncateFourDecimals($pick * $width / $weftCount / 20 * 1.0936 / 40);
+                $weights = $weightCalculator->calculate($read, $pick, $width, $warpCount, $weftCount);
 
                 $stock = FabricStock::create([
                     'quality_name' => trim($validated['quality_name']),
@@ -123,9 +122,7 @@ class FabricStockController extends Controller
                     'pick' => $pick,
                     'warp_count' => $warpCount,
                     'weft_count' => $weftCount,
-                    'warp_weight_per_meter_lb' => $warpWeightPerMeter,
-                    'weft_weight_per_meter_lb' => $weftWeightPerMeter,
-                    'total_weight_per_meter_lb' => $warpWeightPerMeter + $weftWeightPerMeter,
+                    ...$weights,
                     'current_stock_meters' => 0,
                     'total_meters_produced' => 0,
                     'total_rolls_in_stock' => 0,

@@ -68,25 +68,37 @@ class BagController extends Controller
         Collection|LengthAwarePaginator $sizingSlips
     ): View {
 
-        // Calculate exact store balances
-        $totalPurchased = BagPurchase::sum('total_bags');
-        $bagsDirectToSizing = BagPurchase::sum('bags_to_sizing');
-        $bagsDirectToFactory = BagPurchase::sum('bags_to_factory');
+        $totalPurchased = (float) BagPurchase::sum('total_bags');
+        $bagsDirectToSizing = (float) BagPurchase::sum('bags_to_sizing');
+        $bagsDirectToFactory = (float) BagPurchase::sum('bags_to_factory');
+        $factoryIssuedToSizing = (float) BagTransaction::where('transaction_type', 'issue_to_sizing')->sum('quantity_bags');
+        $factoryReturnedFromSizing = (float) BagTransaction::where('transaction_type', 'return_from_sizing')->sum('quantity_bags');
+        $totalBagsUsedInBeams = (float) SizingSlip::sum('bags_used');
+        $sizingSlipReturns = (float) SizingSlip::sum('bags_returned_to_factory');
 
-        $factoryIssuedToSizing = BagTransaction::where('transaction_type', 'issue_to_sizing')->sum('quantity_bags');
-        $factoryReturnedFromSizing = BagTransaction::where('transaction_type', 'return_from_sizing')->sum('quantity_bags');
-
-        // Current Factory Stock Store
         $factoryStoreStock = max(0, $bagsDirectToFactory - $factoryIssuedToSizing + $factoryReturnedFromSizing);
-
-        // Current Sizing Units Stock
-        $totalBagsReceivedBySizing = $bagsDirectToSizing + $factoryIssuedToSizing;
-        $totalBagsUsedInBeams = SizingSlip::sum('bags_used');
-        $sizingStockRemaining = max(0, $totalBagsReceivedBySizing - ($totalBagsUsedInBeams + $factoryReturnedFromSizing));
+        $sizingStockRemaining = max(0, $bagsDirectToSizing + $factoryIssuedToSizing - $totalBagsUsedInBeams - $sizingSlipReturns);
 
         // Unused bags breakdown
         $unusedBagsReturned = SizingSlip::sum('bags_returned_to_factory');
         $unusedBagsHeldWithSizing = SizingSlip::sum('bags_held_with_sizing');
+        $qualityBalances = YarnQuality::orderBy('name')->get()->map(function (YarnQuality $yarnQuality): array {
+            $quality = $yarnQuality->name;
+            $directToFactory = (float) BagPurchase::where('quality', $quality)->sum('bags_to_factory');
+            $directToSizing = (float) BagPurchase::where('quality', $quality)->sum('bags_to_sizing');
+            $issuedToSizing = (float) BagTransaction::where('quality', $quality)->where('transaction_type', 'issue_to_sizing')->sum('quantity_bags');
+            $returnedToFactory = (float) BagTransaction::where('quality', $quality)->where('transaction_type', 'return_from_sizing')->sum('quantity_bags');
+            $usedInSizing = (float) SizingSlip::where('yarn_quality', $quality)->sum('bags_used');
+            $sizingReturns = (float) SizingSlip::where('yarn_quality', $quality)->sum('bags_returned_to_factory');
+
+            return [
+                'name' => $quality,
+                'factory_stock' => max(0, $directToFactory - $issuedToSizing + $returnedToFactory),
+                'sizing_stock' => max(0, $directToSizing + $issuedToSizing - $usedInSizing - $sizingReturns),
+                'total' => max(0, $directToFactory - $issuedToSizing + $returnedToFactory)
+                    + max(0, $directToSizing + $issuedToSizing - $usedInSizing - $sizingReturns),
+            ];
+        });
 
         // Total Yarn Investment
         $totalYarnInvestment = BagPurchase::sum('total_amount');
@@ -106,7 +118,7 @@ class BagController extends Controller
             'unusedBagsReturned',
             'unusedBagsHeldWithSizing',
             'totalYarnInvestment',
-            'yarnQualities'
+            'yarnQualities', 'qualityBalances'
         ));
     }
 
@@ -116,16 +128,16 @@ class BagController extends Controller
             'challan_no' => 'required|string|max:100',
             'supplier_name' => 'required|string|max:150',
             'quality' => 'required|string|exists:yarn_qualities,name',
-            'total_bags' => 'required|integer|min:1',
-            'bags_to_sizing' => 'required|integer|min:0',
-            'bags_to_factory' => 'required|integer|min:0',
+            'total_bags' => 'required|numeric|min:0.01|decimal:0,2',
+            'bags_to_sizing' => 'required|numeric|min:0|decimal:0,2',
+            'bags_to_factory' => 'required|numeric|min:0|decimal:0,2',
             'sizing_destination' => 'nullable|string|max:150',
             'rate_per_bag' => 'required|numeric|min:0',
             'purchase_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
 
-        if (($validated['bags_to_sizing'] + $validated['bags_to_factory']) != $validated['total_bags']) {
+        if (round($validated['bags_to_sizing'] + $validated['bags_to_factory'], 2) !== round($validated['total_bags'], 2)) {
             return back()->withInput()->with('error', 'Error: Split bags (Sizing + Factory) must exactly equal Total Bags ('.$validated['total_bags'].').');
         }
 
@@ -138,50 +150,44 @@ class BagController extends Controller
         $totalAmount = $validated['total_bags'] * $validated['rate_per_bag'];
         $validated['total_amount'] = $totalAmount;
 
-        $purchase = BagPurchase::create($validated);
+        $purchase = DB::transaction(function () use ($validated, $totalAmount): BagPurchase {
+            $purchase = BagPurchase::create([...$validated, 'total_amount' => $totalAmount]);
 
-        // 1. Transaction for bags to factory
-        if ($purchase->bags_to_factory > 0) {
-            BagTransaction::create([
-                'transaction_type' => 'purchase_factory',
-                'reference_no' => $purchase->challan_no,
-                'quality' => $purchase->quality,
-                'quantity_bags' => $purchase->bags_to_factory,
-                'source' => $purchase->supplier_name,
-                'destination' => 'Factory Yarn Store',
-                'party_name' => 'Internal Store',
+            foreach ([
+                ['quantity' => 'bags_to_factory', 'type' => 'purchase_factory', 'destination' => 'Factory Yarn Store', 'party' => 'Internal Store', 'notes' => 'Direct receipt into factory yarn warehouse'],
+                ['quantity' => 'bags_to_sizing', 'type' => 'purchase_sizing', 'destination' => $purchase->sizing_destination, 'party' => $purchase->sizing_destination, 'notes' => 'Direct delivery from spinning mill to sizing unit'],
+            ] as $movement) {
+                if ((float) $purchase->{$movement['quantity']} <= 0) {
+                    continue;
+                }
+
+                BagTransaction::create([
+                    'transaction_type' => $movement['type'],
+                    'reference_no' => $purchase->challan_no,
+                    'quality' => $purchase->quality,
+                    'quantity_bags' => $purchase->{$movement['quantity']},
+                    'source' => $purchase->supplier_name,
+                    'destination' => $movement['destination'],
+                    'party_name' => $movement['party'],
+                    'transaction_date' => $purchase->purchase_date,
+                    'notes' => $movement['notes'],
+                ]);
+            }
+
+            Ledger::create([
+                'party_name' => $purchase->supplier_name,
+                'party_type' => 'yarn_supplier',
                 'transaction_date' => $purchase->purchase_date,
-                'notes' => 'Direct receipt into factory yarn warehouse',
+                'voucher_no' => $purchase->challan_no,
+                'description' => "Yarn Purchase: {$purchase->total_bags} bags ({$purchase->quality}) @ Rs. {$purchase->rate_per_bag}",
+                'debit' => 0.00,
+                'credit' => $totalAmount,
+                'balance' => -$totalAmount,
+                'notes' => $purchase->notes,
             ]);
-        }
 
-        // 2. Transaction for bags to sizing
-        if ($purchase->bags_to_sizing > 0) {
-            BagTransaction::create([
-                'transaction_type' => 'purchase_sizing',
-                'reference_no' => $purchase->challan_no,
-                'quality' => $purchase->quality,
-                'quantity_bags' => $purchase->bags_to_sizing,
-                'source' => $purchase->supplier_name,
-                'destination' => $purchase->sizing_destination,
-                'party_name' => $purchase->sizing_destination,
-                'transaction_date' => $purchase->purchase_date,
-                'notes' => 'Direct delivery from spinning mill to sizing unit',
-            ]);
-        }
-
-        // 3. Record in Ledger
-        Ledger::create([
-            'party_name' => $purchase->supplier_name,
-            'party_type' => 'yarn_supplier',
-            'transaction_date' => $purchase->purchase_date,
-            'voucher_no' => $purchase->challan_no,
-            'description' => "Yarn Purchase: {$purchase->total_bags} bags ({$purchase->quality}) @ Rs. {$purchase->rate_per_bag}",
-            'debit' => 0.00,
-            'credit' => $totalAmount,
-            'balance' => -$totalAmount,
-            'notes' => $purchase->notes,
-        ]);
+            return $purchase;
+        });
 
         return redirect()->route('bags.index')
             ->with('success', "Bag Purchase {$purchase->challan_no} recorded successfully! ({$purchase->bags_to_sizing} to Sizing, {$purchase->bags_to_factory} to Factory)");
@@ -244,10 +250,48 @@ class BagController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $validated['transaction_type'] = 'return_from_sizing';
-        $validated['destination'] = 'Factory Yarn Store';
+        $returned = DB::transaction(function () use ($validated): bool {
+            YarnQuality::where('name', $validated['quality'])->lockForUpdate()->firstOrFail();
 
-        BagTransaction::create($validated);
+            $issue = BagTransaction::where('transaction_type', 'issue_to_sizing')
+                ->where('reference_no', $validated['reference_no'])
+                ->where('quality', $validated['quality'])
+                ->where('destination', $validated['source'])
+                ->where('party_name', $validated['party_name'])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $issue) {
+                return false;
+            }
+
+            $sizingSlip = SizingSlip::where('bag_transaction_id', $issue->id)->first();
+            $slipReturned = (float) ($sizingSlip?->bags_returned_to_factory ?? 0);
+            $allManualReturns = (float) BagTransaction::where('transaction_type', 'return_from_sizing')
+                ->where('quality', $validated['quality'])
+                ->where('source', $validated['source'])
+                ->where('party_name', $validated['party_name'])
+                ->where('reference_no', $issue->reference_no)
+                ->sum('quantity_bags');
+            $availableToReturn = max(0, (float) $issue->quantity_bags - $slipReturned - $allManualReturns);
+
+            if ((float) $validated['quantity_bags'] > $availableToReturn) {
+                return false;
+            }
+
+            BagTransaction::create([
+                ...$validated,
+                'reference_no' => $issue->reference_no,
+                'transaction_type' => 'return_from_sizing',
+                'destination' => 'Factory Yarn Store',
+            ]);
+
+            return true;
+        });
+
+        if (! $returned) {
+            return back()->withInput()->with('error', 'Return not recorded. Check the original issue reference, quality, party, and remaining unreturned quantity.');
+        }
 
         return redirect()->route('bags.index')
             ->with('success', "Received back {$validated['quantity_bags']} unused bags of {$validated['quality']} into Factory Store.");
