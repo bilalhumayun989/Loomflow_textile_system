@@ -207,8 +207,8 @@
 
         @if($page === 'leakage')
             @php
-                $expectedTotal = (float) $beamLeakageRows->sum(fn ($beam) => (float) $beam->total_length_meters * (float) ($beam->sizingSlip?->width_multiplier ?? 1));
-                $actualTotal = (float) $beamLeakageRows->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
+                $expectedTotal = (float) $sizingSlipProductionRows->sum('expected_consumed_meters');
+                $actualTotal = (float) $sizingSlipProductionRows->sum('actual_woven_meters');
                 $gapTotal = max(0, $expectedTotal - $actualTotal);
                 $finalLeakageTotal = (float) $beamLeakageRows->where('status', 'exhausted')->sum(fn ($beam) => max(0, ((float) $beam->total_length_meters * (float) ($beam->sizingSlip?->width_multiplier ?? 1)) - (float) ($beam->productions_sum_net_meters_produced ?? 0)));
             @endphp
@@ -227,12 +227,31 @@
                     <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
                         <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Expected − Actual Gap</div>
                         <div class="mt-1 font-mono text-2xl font-black text-zinc-900">{{ number_format($gapTotal, 2) }}m</div>
-                        <p class="mt-1 text-xs text-zinc-400">Current gap across all beams</p>
+                        <p class="mt-1 text-xs text-zinc-400">Expected from consumed warp minus woven cloth</p>
                     </div>
                     <div class="rounded-2xl border border-zinc-300 bg-zinc-100 p-4 shadow-sm">
                         <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-700">Final Leakage on Exhausted Beams</div>
                         <div class="mt-1 font-mono text-2xl font-black text-zinc-900">{{ number_format($finalLeakageTotal, 2) }}m</div>
                         <p class="mt-1 text-xs text-zinc-600">Expected minus actual for finished beams</p>
+                    </div>
+                </div>
+
+                <div class="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+                    <div class="border-b border-zinc-100 bg-zinc-50 px-6 py-4">
+                        <h2 class="text-sm font-extrabold text-zinc-900">Production by Sizing Slip</h2>
+                        <p class="mt-1 text-[11px] text-zinc-500">All beams and looms linked to a slip are combined. Expected cloth uses only warp recorded as consumed, so unused beams do not inflate the expectation.</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-white text-[10px] font-semibold uppercase tracking-wider text-zinc-500"><tr class="border-b border-zinc-200"><th class="px-4 py-3">Sizing Slip</th><th class="px-4 py-3">Yarn Quality</th><th class="px-4 py-3 text-right">Beams Used / Total</th><th class="px-4 py-3 text-right">Looms</th><th class="px-4 py-3 text-right">Expected from Used Warp</th><th class="px-4 py-3 text-right">Actual Woven</th><th class="px-4 py-3 text-right">Recorded Leakage</th></tr></thead>
+                            <tbody class="divide-y divide-zinc-100">
+                                @forelse($sizingSlipProductionRows as $slipProduction)
+                                    <tr class="hover:bg-zinc-50"><td class="px-4 py-3 font-mono font-bold text-zinc-900">{{ $slipProduction->slip_no }}</td><td class="px-4 py-3 text-zinc-600">{{ $slipProduction->yarn_quality }}</td><td class="px-4 py-3 text-right font-mono">{{ $slipProduction->used_beam_count }} / {{ $slipProduction->total_beams }}</td><td class="px-4 py-3 text-right font-mono">{{ $slipProduction->loom_count }}</td><td class="px-4 py-3 text-right font-mono">{{ number_format($slipProduction->expected_consumed_meters, 2) }}m</td><td class="px-4 py-3 text-right font-mono font-bold">{{ number_format($slipProduction->actual_woven_meters, 2) }}m</td><td class="px-4 py-3 text-right font-mono font-bold text-amber-700">{{ number_format($slipProduction->recorded_leakage_meters, 2) }}m</td></tr>
+                                @empty
+                                    <tr><td colspan="7" class="px-4 py-10 text-center text-zinc-400">No sizing slips have production records yet.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

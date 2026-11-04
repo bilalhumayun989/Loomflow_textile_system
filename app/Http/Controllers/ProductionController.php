@@ -60,10 +60,30 @@ class ProductionController extends Controller
             ->where('status', 'mounted_on_loom')
             ->get();
         $beamLeakageRows = SizingBeam::with('sizingSlip')
+            ->with('productions:id,sizing_beam_id,loom_no')
             ->withSum('productions', 'net_meters_produced')
             ->withSum('productions', 'beam_meters_consumed')
             ->orderByDesc('id')
             ->get();
+        $sizingSlipProductionRows = $page === 'leakage'
+            ? DB::table('sizing_slips')
+                ->leftJoin('sizing_beams', 'sizing_beams.sizing_slip_id', '=', 'sizing_slips.id')
+                ->leftJoin('productions', 'productions.sizing_beam_id', '=', 'sizing_beams.id')
+                ->select([
+                    'sizing_slips.id',
+                    'sizing_slips.slip_no',
+                    'sizing_slips.yarn_quality',
+                    'sizing_slips.total_beams',
+                ])
+                ->selectRaw('COUNT(DISTINCT CASE WHEN productions.id IS NOT NULL THEN sizing_beams.id END) as used_beam_count')
+                ->selectRaw('COUNT(DISTINCT productions.loom_no) as loom_count')
+                ->selectRaw('COALESCE(SUM(productions.expected_fabric_meters), 0) as expected_consumed_meters')
+                ->selectRaw('COALESCE(SUM(productions.net_meters_produced), 0) as actual_woven_meters')
+                ->selectRaw('COALESCE(SUM(productions.leakage_waste_meters), 0) as recorded_leakage_meters')
+                ->groupBy('sizing_slips.id', 'sizing_slips.slip_no', 'sizing_slips.yarn_quality', 'sizing_slips.total_beams')
+                ->orderByDesc('sizing_slips.id')
+                ->get()
+            : collect();
         $fabricQualities = FabricStock::orderBy('quality_name')->get();
         $looms = collect(range(1, 24))->map(fn ($i) => sprintf('Loom-%02d', $i));
 
@@ -86,6 +106,7 @@ class ProductionController extends Controller
             'productions',
             'activeBeams',
             'beamLeakageRows',
+            'sizingSlipProductionRows',
             'fabricQualities',
             'looms',
             'totalFabricProduced',

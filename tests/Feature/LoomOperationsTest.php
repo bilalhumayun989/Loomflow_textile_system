@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BagTransaction;
 use App\Models\FabricStock;
 use App\Models\Part;
+use App\Models\Production;
 use App\Models\SizingBeam;
 use App\Models\SizingSlip;
 use App\Models\User;
@@ -625,6 +626,88 @@ class LoomOperationsTest extends TestCase
         $this->assertEquals('mounted_on_loom', $beam->fresh()->status);
         $this->assertEquals(300, $fabric->fresh()->current_stock_meters);
         $this->assertEquals(300, $fabric->fresh()->daily_received_meters);
+    }
+
+    public function test_production_leakage_summary_counts_only_used_beams_and_combines_looms_by_sizing_slip(): void
+    {
+        $slip = SizingSlip::create([
+            'slip_no' => 'SZ-MULTI-LOOM-1',
+            'sizing_party' => 'Sizing Mill',
+            'yarn_quality' => '40/1 Cotton',
+            'bags_allocated' => 40,
+            'bags_used' => 40,
+            'total_beams' => 4,
+            'total_length_meters' => 1000,
+            'width_multiplier' => 2,
+            'slip_date' => now()->toDateString(),
+        ]);
+
+        $fabric = FabricStock::create([
+            'quality_name' => 'Multi Loom Fabric',
+            'construction' => '40x40',
+            'width_inches' => 63,
+            'current_stock_meters' => 0,
+            'available_open_meters' => 0,
+            'total_rolls_in_stock' => 0,
+        ]);
+
+        foreach (['Loom-01', 'Loom-02', 'Loom-03', null] as $index => $loom) {
+            $beam = SizingBeam::create([
+                'sizing_slip_id' => $slip->id,
+                'beam_no' => 'BM-MULTI-'.$index,
+                'yarn_quality' => '40/1 Cotton',
+                'total_length_meters' => 250,
+                'remaining_length_meters' => $loom === null ? 250 : 0,
+                'status' => $loom === null ? 'ready_in_store' : 'exhausted',
+                'assigned_loom_no' => $loom,
+            ]);
+
+            if ($loom === null) {
+                continue;
+            }
+
+            Production::create([
+                'production_date' => now()->toDateString(),
+                'shift' => 'Day',
+                'loom_no' => $loom,
+                'operator_name' => 'Test Weaver',
+                'sizing_beam_id' => $beam->id,
+                'fabric_stock_id' => $fabric->id,
+                'fabric_quality' => $fabric->quality_name,
+                'start_meter' => 0,
+                'end_meter' => 450,
+                'net_meters_produced' => 450,
+                'beam_meters_consumed' => 250,
+                'expected_fabric_meters' => 500,
+                'leakage_waste_meters' => 50,
+                'leakage_percentage' => 10,
+                'picks_per_inch' => 60,
+                'rpm' => 350,
+                'efficiency_percentage' => 90,
+            ]);
+        }
+
+        $this->actingAs($this->user)->get(route('production.leakage'))
+            ->assertOk()
+            ->assertSee('Production by Sizing Slip')
+            ->assertSee('SZ-MULTI-LOOM-1')
+            ->assertSee('3 / 4')
+            ->assertSee('1,500.00m')
+            ->assertSee('1,350.00m')
+            ->assertSee('3', false);
+
+        $this->actingAs($this->user)->get(route('sizing.slips'))
+            ->assertOk()
+            ->assertSee('Expected Cloth')
+            ->assertSee('150.00m short')
+            ->assertSee('used warp: 1,500.00m expected');
+
+        $this->actingAs($this->user)->get(route('sizing.beams'))
+            ->assertOk()
+            ->assertSee('Short / Over on Used Warp')
+            ->assertSee('50.00m short')
+            ->assertSee('against 500.00m expected on consumed warp')
+            ->assertSee('No production yet');
     }
 
     public function test_sales_slip_decrements_available_fabric_stock(): void

@@ -21,10 +21,19 @@ class SizingController extends Controller
 
     public function index(): View
     {
-        $slips = SizingSlip::with(['beams' => fn ($query) => $query->withSum('productions', 'net_meters_produced')])
+        $slips = SizingSlip::with(['beams' => fn ($query) => $query
+            ->withSum('productions', 'net_meters_produced')
+            ->withSum('productions', 'expected_fabric_meters')
+            ->withCount('productions')])
             ->latest('slip_date')->latest('id')->limit(5)->get();
-        $beams = SizingBeam::with(['sizingSlip.beams' => fn ($query) => $query->withSum('productions', 'net_meters_produced')])
-            ->withSum('productions', 'net_meters_produced')->latest('id')->limit(5)->get();
+        $beams = SizingBeam::with(['sizingSlip.beams' => fn ($query) => $query
+            ->withSum('productions', 'net_meters_produced')
+            ->withSum('productions', 'expected_fabric_meters')
+            ->withCount('productions')])
+            ->withSum('productions', 'net_meters_produced')
+            ->withSum('productions', 'expected_fabric_meters')
+            ->withCount('productions')
+            ->latest('id')->limit(5)->get();
         $page = 'dashboard';
 
         return $this->renderPage($page, $slips, $beams);
@@ -35,8 +44,14 @@ class SizingController extends Controller
         return $this->renderPage(
             'beams',
             collect(),
-            SizingBeam::with(['sizingSlip.beams' => fn ($query) => $query->withSum('productions', 'net_meters_produced')])
-                ->withSum('productions', 'net_meters_produced')->latest('id')->paginate(15)
+            SizingBeam::with(['sizingSlip.beams' => fn ($query) => $query
+                ->withSum('productions', 'net_meters_produced')
+                ->withSum('productions', 'expected_fabric_meters')
+                ->withCount('productions')])
+                ->withSum('productions', 'net_meters_produced')
+                ->withSum('productions', 'expected_fabric_meters')
+                ->withCount('productions')
+                ->latest('id')->paginate(15)
         );
     }
 
@@ -44,7 +59,10 @@ class SizingController extends Controller
     {
         return $this->renderPage(
             'slips',
-            SizingSlip::with(['beams' => fn ($query) => $query->withSum('productions', 'net_meters_produced')])
+            SizingSlip::with(['beams' => fn ($query) => $query
+                ->withSum('productions', 'net_meters_produced')
+                ->withSum('productions', 'expected_fabric_meters')
+                ->withCount('productions')])
                 ->latest('slip_date')->latest('id')->paginate(10),
             collect()
         );

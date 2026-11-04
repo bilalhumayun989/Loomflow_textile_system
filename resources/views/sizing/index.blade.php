@@ -319,7 +319,7 @@
                         <th class="px-4 py-3 text-right">Warp Length</th>
                         <th class="px-4 py-3 text-right">Expected Fabric</th>
                         <th class="px-4 py-3 text-right">Actual Woven</th>
-                        <th class="px-4 py-3 text-right">Production Short / Over</th>
+                        <th class="px-4 py-3 text-right">Short / Over on Used Warp</th>
                         <th class="px-4 py-3 text-right">Remaining Length</th>
                         <th class="px-4 py-3 text-center">Assigned Loom</th>
                         <th class="px-4 py-3 text-center">Status</th>
@@ -338,12 +338,18 @@
                                 $actualWovenMeters = (float) ($bm->productions_sum_net_meters_produced ?? 0);
                                 $beamWidthMultiplier = (float) ($bm->sizingSlip?->width_multiplier ?? 1);
                                 $expectedFabricMeters = (float) $bm->total_length_meters * $beamWidthMultiplier;
-                                $productionVarianceMeters = $expectedFabricMeters - $actualWovenMeters;
+                                $expectedConsumedMeters = (float) ($bm->productions_sum_expected_fabric_meters ?? 0);
+                                $productionVarianceMeters = $expectedConsumedMeters - $actualWovenMeters;
                             @endphp
                             <td class="px-4 py-3 text-right font-mono text-zinc-600">{{ number_format($expectedFabricMeters, 2) }}m</td>
                             <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">{{ number_format($actualWovenMeters, 2) }}m</td>
                             <td class="px-4 py-3 text-right font-mono {{ $productionVarianceMeters >= 0 ? 'text-amber-700' : 'text-emerald-700' }}">
-                                {{ number_format(abs($productionVarianceMeters), 2) }}m {{ $productionVarianceMeters >= 0 ? 'short' : 'over' }}
+                                @if(($bm->productions_count ?? 0) > 0)
+                                    {{ number_format(abs($productionVarianceMeters), 2) }}m {{ $productionVarianceMeters >= 0 ? 'short' : 'over' }}
+                                    <span class="block text-[9px] text-zinc-400">against {{ number_format($expectedConsumedMeters, 2) }}m expected on consumed warp</span>
+                                @else
+                                    <span class="text-zinc-400">No production yet</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-right font-mono font-bold {{ $bm->remaining_length_meters < 500 ? 'text-zinc-400' : 'text-zinc-900' }}">
                                 {{ number_format($bm->remaining_length_meters, 0) }}m
@@ -569,7 +575,7 @@
                         <th class="px-4 py-3 text-right">Expected Cloth</th>
                         <th class="px-4 py-3 text-right">Expected / Full Beam</th>
                         <th class="px-4 py-3 text-right">Actually Woven</th>
-                        <th class="px-4 py-3 text-right">Short / Over</th>
+                        <th class="px-4 py-3 text-right">Short / Over on Used Warp</th>
                         <th class="px-4 py-3 text-right">Ends / Taarein</th>
                         <th class="px-4 py-3 text-right">Net Yarn Weight</th>
                         <th class="px-4 py-3 text-right">Estimated Count</th>
@@ -606,7 +612,9 @@
                                 $expectedTotalMeters = $s->expectedFabricMeters();
                                 $expectedMetersPerBeam = $s->expectedFabricMetersPerBeam();
                                 $actualSlipProduction = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
-                                $shortageMeters = $expectedTotalMeters - $actualSlipProduction;
+                                $expectedConsumedMeters = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_expected_fabric_meters ?? 0));
+                                $productionCount = (int) $s->beams->sum(fn ($beam) => (int) ($beam->productions_count ?? 0));
+                                $shortageMeters = $expectedConsumedMeters - $actualSlipProduction;
                                 $allSlipBeamsFinished = $s->beams->isNotEmpty() && $s->beams->every(fn ($beam) => $beam->status === 'exhausted');
                                 $estimatedWarpCount = $s->estimatedWarpCountNe();
                             @endphp
@@ -620,8 +628,12 @@
                             </td>
                             <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">{{ number_format($actualSlipProduction, 2) }}m</td>
                             <td class="px-4 py-3 text-right font-mono {{ $shortageMeters >= 0 ? 'text-amber-700' : 'text-emerald-700' }}">
-                                {{ number_format(abs($shortageMeters), 2) }}m {{ $shortageMeters >= 0 ? 'short' : 'over' }}
-                                <span class="block text-[10px]">{{ $allSlipBeamsFinished ? 'final' : 'provisional' }}</span>
+                                @if($productionCount > 0)
+                                    {{ number_format(abs($shortageMeters), 2) }}m {{ $shortageMeters >= 0 ? 'short' : 'over' }}
+                                    <span class="block text-[10px]">used warp: {{ number_format($expectedConsumedMeters, 2) }}m expected · {{ $allSlipBeamsFinished ? 'final' : 'provisional' }}</span>
+                                @else
+                                    <span class="text-zinc-400">No production yet</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->total_ends ? number_format($s->total_ends) : '—' }}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-700">{{ $s->sizing_weight_pounds !== null ? number_format($s->sizing_weight_pounds * 0.45359237, 2).' kg net' : '—' }}{{ $s->sizing_gross_weight_pounds !== null ? ' / '.number_format($s->sizing_gross_weight_pounds * 0.45359237, 2).' kg gross' : '' }}@if($s->sizing_bill_amount !== null)<span class="mt-1 block text-[10px] font-bold text-zinc-900">Rs. {{ number_format($s->sizing_bill_amount, 2) }} @ {{ number_format($s->sizing_rate_per_kg, 2) }}/kg</span>@endif</td>
