@@ -313,6 +313,7 @@
                 <thead>
                     <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
                         <th class="px-4 py-3">Beam #</th>
+                        <th class="px-4 py-3">Beam Name</th>
                         <th class="px-4 py-3">Sizing Slip Ref</th>
                         <th class="px-4 py-3">Yarn Quality</th>
                         <th class="px-4 py-3 text-right">Warp Length</th>
@@ -329,6 +330,7 @@
                     @forelse($beams as $bm)
                         <tr class="hover:bg-zinc-50 transition-colors">
                             <td class="px-4 py-3 font-mono font-black text-zinc-900 text-sm">{{ $bm->beam_no }}</td>
+                            <td class="px-4 py-3 font-semibold text-zinc-800">{{ $bm->beam_name ?: '—' }}</td>
                             <td class="px-4 py-3 font-mono text-zinc-500">{{ $bm->sizingSlip ? $bm->sizingSlip->slip_no : 'Manual' }}</td>
                             <td class="px-4 py-3 font-semibold text-zinc-700">{{ $bm->yarn_quality }}</td>
                             <td class="px-4 py-3 text-right font-mono text-zinc-500">{{ number_format($bm->total_length_meters, 0) }}m</td>
@@ -380,6 +382,7 @@
                                                 onclick="openMountModal(this)"
                                                 data-id="{{ $bm->id }}"
                                                 data-beam-no="{{ $bm->beam_no }}"
+                                                data-beam-name="{{ $bm->beam_name }}"
                                                 data-loom="{{ $bm->assigned_loom_no }}"
                                                 data-quality="{{ $bm->yarn_quality }}"
                                                 data-warp-meters="{{ number_format((float) $bm->total_length_meters, 2, '.', '') }}"
@@ -403,7 +406,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="11" class="px-4 py-10 text-center text-zinc-400">No beams generated yet. Create a Sizing Slip to generate beams.</td></tr>
+                        <tr><td colspan="12" class="px-4 py-10 text-center text-zinc-400">No beams generated yet. Create a Sizing Slip to generate beams.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -497,7 +500,7 @@
                                     <tbody class="divide-y divide-zinc-100">
                                         @foreach($slipDetails->beams as $slipBeam)
                                             <tr>
-                                                <td class="px-4 py-2.5 font-mono font-bold text-zinc-900">{{ $slipBeam->beam_no }}</td>
+                                                <td class="px-4 py-2.5 font-mono font-bold text-zinc-900">{{ $slipBeam->beam_name ?: $slipBeam->beam_no }} <span class="block text-[10px] text-zinc-400">{{ $slipBeam->beam_no }}</span></td>
                                                 <td class="px-4 py-2.5 text-zinc-600">{{ str_replace('_', ' ', ucfirst($slipBeam->status)) }}{{ $slipBeam->assigned_loom_no ? ' · '.$slipBeam->assigned_loom_no : '' }}</td>
                                                 <td class="px-4 py-2.5 text-right font-mono text-zinc-700">{{ number_format((float) $slipBeam->total_length_meters * (float) $slipDetails->width_multiplier, 2) }}m</td>
                                                 <td class="px-4 py-2.5 text-right font-mono text-zinc-700">{{ number_format($slipBeam->productions_sum_net_meters_produced ?? 0, 2) }}m</td>
@@ -784,8 +787,13 @@
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Finished Full Beams Made *</label>
                         <input type="number" id="inpTotalBeams" name="total_beams" required min="1" max="100"
-                               placeholder="e.g. 4" oninput="calculateBeamLengthSplit()"
+                               placeholder="e.g. 4" oninput="calculateBeamLengthSplit(); renderBeamNameInputs()"
                                class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-zinc-500">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-zinc-600 mb-1">Finished Beam Names *</label>
+                        <div id="beamNamesContainer" class="grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
+                        <p class="mt-1 text-[10px] text-zinc-400">Enter the actual name or identifying mark for each finished beam.</p>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-600 mb-1">Set Warp Length (Gate Pass) *</label>
@@ -921,7 +929,7 @@
                 Select a beam to see its yarn quality and remaining length.
             </div>
             <div>
-                <label class="block text-xs font-semibold text-zinc-600 mb-1">Assign to Loom # *</label>
+                <label class="block text-xs font-semibold text-zinc-600 mb-1">Select Loom for this Beam *</label>
                 <select name="assigned_loom_no" id="selectMountLoom" required class="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500">
                     @foreach($looms as $loom)
                         <option value="{{ $loom }}">{{ $loom }}</option>
@@ -1060,6 +1068,30 @@
         updateSizingCountPreview();
     }
 
+    function renderBeamNameInputs() {
+        const count = Math.min(100, Math.max(0, parseInt(document.getElementById('inpTotalBeams').value) || 0));
+        const container = document.getElementById('beamNamesContainer');
+        const existingValues = Array.from(container.querySelectorAll('input')).map(input => input.value);
+        container.innerHTML = '';
+
+        for (let index = 0; index < count; index++) {
+            const wrapper = document.createElement('div');
+            const label = document.createElement('label');
+            label.className = 'mb-1 block text-[11px] font-semibold text-zinc-600';
+            label.textContent = `Finished Beam ${index + 1} Name *`;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'beam_names[]';
+            input.required = true;
+            input.maxLength = 100;
+            input.placeholder = `e.g. Beam ${index + 1} / ${index + 1} Number`;
+            input.value = existingValues[index] || '';
+            input.className = 'w-full rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-500';
+            wrapper.append(label, input);
+            container.append(wrapper);
+        }
+    }
+
     function updateSizingCountPreview() {
         const ends = parseFloat(document.getElementById('inpTotalEnds').value) || 0;
         const setLength = parseFloat(document.getElementById('inpSetLength').value) || 0;
@@ -1089,7 +1121,7 @@
         const remainingMeters = parseFloat(button.dataset.remainingMeters) || 0;
         const widthMultiplier = parseFloat(button.dataset.widthFactor) || 1;
         document.getElementById('formMountBeam').action = `/sizing/beams/${beamId}/assign`;
-        document.getElementById('mountBeamName').value = beamNo;
+        document.getElementById('mountBeamName').value = `${button.dataset.beamName || beamNo} (${beamNo})`;
         document.getElementById('mountBeamDetails').textContent = `${button.dataset.quality}\n${parseFloat(button.dataset.warpMeters).toFixed(2)}m warp supplied · ${remainingMeters.toFixed(2)}m warp remaining\n${(remainingMeters * widthMultiplier).toFixed(2)}m expected fabric at factor ${widthMultiplier}`;
         if (currentLoom) document.getElementById('selectMountLoom').value = currentLoom;
         openModal('modalMountBeam');

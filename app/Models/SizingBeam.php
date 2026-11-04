@@ -14,6 +14,7 @@ class SizingBeam extends Model
     protected $fillable = [
         'sizing_slip_id',
         'beam_no',
+        'beam_name',
         'yarn_quality',
         'total_length_meters',
         'remaining_length_meters',

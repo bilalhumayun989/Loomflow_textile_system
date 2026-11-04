@@ -132,6 +132,8 @@ class SizingController extends Controller
             'bags_returned_to_factory' => 'required|numeric|min:0|decimal:0,2',
             'bags_held_with_sizing' => 'required|numeric|min:0|decimal:0,2',
             'total_beams' => 'required|integer|min:1|max:100',
+            'beam_names' => ['required', 'array', 'size:'.$request->input('total_beams')],
+            'beam_names.*' => 'required|string|max:100',
             'back_beam_count' => 'nullable|integer|min:1|max:1000',
             'width_multiplier' => 'required|numeric|min:0.01|max:100',
             'set_length_value' => 'required|numeric|min:0.01',
@@ -215,7 +217,10 @@ class SizingController extends Controller
             ]);
         }
 
-        $slipResult = DB::transaction(function () use ($validated): SizingSlip|false {
+        $beamNames = $validated['beam_names'];
+        unset($validated['beam_names']);
+
+        $slipResult = DB::transaction(function () use ($validated, $beamNames): SizingSlip|false {
             $sourceTransaction = BagTransaction::whereKey($validated['bag_transaction_id'])
                 ->whereIn('transaction_type', ['purchase_sizing', 'issue_to_sizing'])
                 ->whereDoesntHave('sizingSlip')
@@ -258,6 +263,7 @@ class SizingController extends Controller
                 SizingBeam::create([
                     'sizing_slip_id' => $slip->id,
                     'beam_no' => 'BM-'.($lastBeamId + $i),
+                    'beam_name' => trim($beamNames[$i - 1]),
                     'yarn_quality' => $slip->yarn_quality,
                     'total_length_meters' => $meterPerBeam,
                     'remaining_length_meters' => $meterPerBeam,
@@ -312,6 +318,17 @@ class SizingController extends Controller
             'assigned_loom_no' => 'required|string|max:50',
             'mounted_date' => 'required|date',
         ]);
+
+        $alreadyMounted = SizingBeam::where('assigned_loom_no', $validated['assigned_loom_no'])
+            ->where('status', 'mounted_on_loom')
+            ->whereKeyNot($beam->getKey())
+            ->exists();
+
+        if ($alreadyMounted) {
+            return back()->withInput()->withErrors([
+                'assigned_loom_no' => 'This loom already has a beam mounted. Mark it finished before mounting another beam.',
+            ]);
+        }
 
         if (! in_array($beam->status, ['ready_in_store', 'mounted_on_loom'], true) || $beam->remaining_length_meters <= 0) {
             return back()->with('error', 'This beam is exhausted or is not available to mount.');
