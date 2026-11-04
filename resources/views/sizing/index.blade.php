@@ -950,6 +950,8 @@
 
 @push('scripts')
 <script>
+    const sizingBeamAssignUrlTemplate = @json(route('sizing.beam.assign', ['beam' => '__BEAM_ID__']));
+
     function openSizingSlipFromBag(button) {
         const bagTransaction = document.getElementById('inpBagTransactionId');
         bagTransaction.value = button.dataset.id || '';
@@ -1120,7 +1122,7 @@
         const currentLoom = button.dataset.loom;
         const remainingMeters = parseFloat(button.dataset.remainingMeters) || 0;
         const widthMultiplier = parseFloat(button.dataset.widthFactor) || 1;
-        document.getElementById('formMountBeam').action = `/sizing/beams/${beamId}/assign`;
+        document.getElementById('formMountBeam').action = sizingBeamAssignUrlTemplate.replace('__BEAM_ID__', encodeURIComponent(beamId));
         document.getElementById('mountBeamName').value = `${button.dataset.beamName || beamNo} (${beamNo})`;
         document.getElementById('mountBeamDetails').textContent = `${button.dataset.quality}\n${parseFloat(button.dataset.warpMeters).toFixed(2)}m warp supplied · ${remainingMeters.toFixed(2)}m warp remaining\n${(remainingMeters * widthMultiplier).toFixed(2)}m expected fabric at factor ${widthMultiplier}`;
         if (currentLoom) document.getElementById('selectMountLoom').value = currentLoom;
