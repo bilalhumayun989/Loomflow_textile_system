@@ -563,10 +563,10 @@
             @endif
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+        <div class="overflow-x-auto rounded-b-3xl">
+            <table class="w-full min-w-[2200px] table-fixed text-left text-xs">
                 <thead>
-                    <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider bg-zinc-50">
+                    <tr class="border-b border-zinc-200 text-zinc-500 font-semibold uppercase text-[10px] leading-4 tracking-wider bg-zinc-50 align-top">
                         <th class="px-4 py-3">Slip #</th>
                         <th class="px-4 py-3">Date</th>
                         <th class="px-4 py-3">Sizing Party</th>
