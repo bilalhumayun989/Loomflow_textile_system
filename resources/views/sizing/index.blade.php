@@ -189,7 +189,7 @@
     <section class="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
         <div class="border-b border-zinc-100 bg-zinc-50 px-6 py-4">
             <h2 class="text-sm font-extrabold text-zinc-900">Sizing Reconciliation</h2>
-            <p class="mt-1 max-w-4xl text-xs leading-5 text-zinc-500">Check each slip's bags (sent = used + returned + held), bill weights, and cloth recorded from production. Loom shortage is final only after every beam is exhausted; before then it includes fabric that has not been woven yet.</p>
+            <p class="mt-1 max-w-4xl text-xs leading-5 text-zinc-500">Expected cloth counts beams mounted or completed on looms. Beams still ready in store are unused and do not add to the used-beam production balance.</p>
             <div class="mt-3 grid gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-[11px] leading-5 text-zinc-600 md:grid-cols-2">
                 <p><strong class="text-zinc-800">Estimated yarn count (Ne):</strong> ends × set length in metres ÷ (1693.6 × net yarn weight in kg). The set length is used because it represents the warp yarn length; panna changes expected fabric output, not yarn count.</p>
                 <p><strong class="text-zinc-800">Net yarn per woven metre:</strong> net sizing weight in lb ÷ actual woven metres recorded in Production. This is a weight ratio, not the yarn count.</p>
@@ -206,16 +206,20 @@
                             $bagVariance = (int) round(((float) $s->bags_allocated - (float) $s->bags_used - (float) $s->bags_returned_to_factory - (float) $s->bags_held_with_sizing) * 100);
                             $grossKg = $s->sizing_gross_weight_pounds !== null ? (float) $s->sizing_gross_weight_pounds * 0.45359237 : null;
                             $netKg = $s->sizing_weight_pounds !== null ? (float) $s->sizing_weight_pounds * 0.45359237 : null;
-                            $expectedMeters = $s->expectedFabricMeters();
-                            $wovenMeters = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
-                            $expectedConsumedMeters = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_expected_fabric_meters ?? 0));
-                            $leakageMeters = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_leakage_waste_meters ?? 0));
+                            $usedBeams = $s->beams->filter(fn ($beam) => in_array($beam->status, ['mounted_on_loom', 'exhausted'], true) || (int) ($beam->productions_count ?? 0) > 0);
+                            $usedBeamCount = $usedBeams->count();
+                            $unusedBeamCount = max(0, (int) $s->total_beams - $usedBeamCount);
+                            $expectedMeters = (float) $usedBeams->sum(fn ($beam) => (float) $beam->total_length_meters * (float) $s->width_multiplier);
+                            $wovenMeters = (float) $usedBeams->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
+                            $expectedConsumedMeters = (float) $usedBeams->sum(fn ($beam) => (float) ($beam->productions_sum_expected_fabric_meters ?? 0));
+                            $leakageMeters = (float) $usedBeams->sum(fn ($beam) => (float) ($beam->productions_sum_leakage_waste_meters ?? 0));
                             $estimatedCount = $s->estimatedWarpCountNe();
                             $declaredCount = $s->declaredYarnCountNe();
                             $netWeightPounds = $s->sizing_weight_pounds !== null ? (float) $s->sizing_weight_pounds : null;
                             $weightPerWovenMeter = $netWeightPounds !== null && $wovenMeters > 0 ? $netWeightPounds / $wovenMeters : null;
-                            $finishedBeams = $s->beams->where('status', 'exhausted')->count();
-                            $allBeamsFinished = $s->beams->isNotEmpty() && $finishedBeams === $s->beams->count();
+                            $finishedBeams = $usedBeams->where('status', 'exhausted')->count();
+                            $allBeamsFinished = $usedBeams->isNotEmpty() && $finishedBeams === $usedBeamCount;
+                            $remainingExpectedMeters = (float) $usedBeams->sum(fn ($beam) => (float) $beam->remaining_length_meters * (float) $s->width_multiplier);
                         @endphp
                         <tr class="align-top hover:bg-zinc-50">
                             <td class="px-4 py-4"><span class="font-mono font-bold text-zinc-900">{{ $s->slip_no }}</span><span class="mt-1 block text-[10px] text-zinc-400">{{ $s->slip_date->format('d M, Y') }}</span><span class="block text-[10px] text-zinc-500">{{ $s->sizing_party }}</span></td>
@@ -228,7 +232,7 @@
                                 @else<span class="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700">{{ number_format(abs($bagVariance) / 100, 2) }} over-reported</span>@endif
                             </td>
                             <td class="px-4 py-4 text-right font-mono text-zinc-700">{{ $grossKg !== null ? number_format($grossKg, 2).' kg' : '—' }}<span class="block text-[10px] text-zinc-400">net {{ $netKg !== null ? number_format($netKg, 2).' kg' : 'not entered' }}</span>@if($grossKg !== null && $netKg !== null)<span class="block text-[10px] text-zinc-500">{{ number_format($grossKg - $netKg, 2) }} kg deduction</span>@endif</td>
-                            <td class="px-4 py-4 text-right font-mono font-semibold text-zinc-800">{{ number_format($expectedMeters, 2) }}m<span class="block text-[10px] font-normal text-zinc-400">set {{ number_format($s->total_length_meters, 2) }}m × {{ number_format($s->width_multiplier, 2) }}</span></td>
+                            <td class="px-4 py-4 text-right font-mono font-semibold text-zinc-800">{{ number_format($expectedMeters, 2) }}m<span class="block text-[10px] font-normal text-zinc-400">{{ $usedBeamCount }} / {{ $s->total_beams }} beams used × {{ number_format($s->width_multiplier, 2) }} factor</span></td>
                             <td class="px-4 py-4 text-right font-mono text-zinc-700">{{ number_format($wovenMeters, 2) }}m / {{ number_format($expectedConsumedMeters, 2) }}m<span class="block text-[10px] text-zinc-400">actual / expected for warp used</span></td>
                             <td class="px-4 py-4 text-right font-mono font-bold text-amber-700">{{ number_format($leakageMeters, 2) }}m<span class="block text-[10px] font-normal text-zinc-400">from production records</span></td>
                             <td class="px-4 py-4 text-right font-mono text-zinc-700">
@@ -237,7 +241,7 @@
                                 <span class="mt-1 block font-bold text-zinc-800">{{ $weightPerWovenMeter !== null ? number_format($weightPerWovenMeter, 6).' lb/m' : '— lb/m' }}</span>
                                 <span class="block text-[10px] font-normal text-zinc-400">net lb ÷ actual woven m</span>
                             </td>
-                            <td class="px-4 py-4"><span class="font-semibold text-zinc-800">{{ $finishedBeams }} / {{ $s->beams->count() }} exhausted</span><span class="mt-1 block text-[10px] font-bold {{ $allBeamsFinished ? 'text-emerald-700' : 'text-amber-700' }}">{{ $allBeamsFinished ? 'Cloth balance final' : 'Cloth balance provisional' }}</span><span class="block text-[10px] text-zinc-400">{{ number_format(max(0, $expectedMeters - $expectedConsumedMeters), 2) }}m expected on unconsumed warp</span></td>
+                            <td class="px-4 py-4"><span class="font-semibold text-zinc-800">{{ $usedBeamCount }} / {{ $s->total_beams }} beams used · {{ $finishedBeams }} finished</span><span class="mt-1 block text-[10px] font-bold {{ $allBeamsFinished ? 'text-emerald-700' : 'text-amber-700' }}">{{ $allBeamsFinished ? 'Used-beam balance final' : 'Used-beam balance provisional' }}</span><span class="block text-[10px] text-zinc-400">{{ $unusedBeamCount }} unused in store · {{ number_format($remainingExpectedMeters, 2) }}m capacity left on used beams</span></td>
                         </tr>
                     @empty
                         <tr><td colspan="11" class="px-6 py-12 text-center text-sm text-zinc-400">No sizing slips yet. Once a sizing slip is entered, its bag, weight, beam, and production balance will appear here.</td></tr>
@@ -605,23 +609,29 @@
                                     <span class="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700">{{ number_format(abs($bagVariance) / 100, 2) }} over-reported</span>
                                 @endif
                             </td>
+                            @php
+                                $usedSlipBeams = $s->beams->filter(fn ($beam) => in_array($beam->status, ['mounted_on_loom', 'exhausted'], true) || (int) ($beam->productions_count ?? 0) > 0);
+                                $usedSlipBeamCount = $usedSlipBeams->count();
+                                $unusedSlipBeamCount = max(0, (int) $s->total_beams - $usedSlipBeamCount);
+                            @endphp
                             <td class="px-4 py-3 text-center">
                                 <span class="font-bold text-zinc-900">{{ $s->back_beam_count ?? '—' }} / {{ $s->total_beams }}</span>
                                 <span class="block text-zinc-400 text-[10px]">back / full</span>
+                                <span class="mt-1 block text-zinc-600 text-[10px]">{{ $usedSlipBeamCount }} used · {{ $unusedSlipBeamCount }} unused</span>
                             </td>
                             @php
-                                $expectedTotalMeters = $s->expectedFabricMeters();
+                                $expectedTotalMeters = (float) $usedSlipBeams->sum(fn ($beam) => (float) $beam->total_length_meters * (float) $s->width_multiplier);
                                 $expectedMetersPerBeam = $s->expectedFabricMetersPerBeam();
-                                $actualSlipProduction = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
-                                $expectedConsumedMeters = (float) $s->beams->sum(fn ($beam) => (float) ($beam->productions_sum_expected_fabric_meters ?? 0));
-                                $productionCount = (int) $s->beams->sum(fn ($beam) => (int) ($beam->productions_count ?? 0));
+                                $actualSlipProduction = (float) $usedSlipBeams->sum(fn ($beam) => (float) ($beam->productions_sum_net_meters_produced ?? 0));
+                                $expectedConsumedMeters = (float) $usedSlipBeams->sum(fn ($beam) => (float) ($beam->productions_sum_expected_fabric_meters ?? 0));
+                                $productionCount = (int) $usedSlipBeams->sum(fn ($beam) => (int) ($beam->productions_count ?? 0));
                                 $shortageMeters = $expectedConsumedMeters - $actualSlipProduction;
-                                $allSlipBeamsFinished = $s->beams->isNotEmpty() && $s->beams->every(fn ($beam) => $beam->status === 'exhausted');
+                                $allSlipBeamsFinished = $usedSlipBeams->isNotEmpty() && $usedSlipBeams->every(fn ($beam) => $beam->status === 'exhausted');
                                 $estimatedWarpCount = $s->estimatedWarpCountNe();
                             @endphp
                             <td class="px-4 py-3 text-right font-mono font-bold text-zinc-900">
                                 {{ number_format($expectedTotalMeters, 2) }}m
-                                <span class="block text-[10px] font-normal text-zinc-400">{{ number_format($s->total_length_meters, 2) }}m × {{ number_format($s->width_multiplier, 2) }}</span>
+                                <span class="block text-[10px] font-normal text-zinc-400">used beams × {{ number_format($s->width_multiplier, 2) }} factor</span>
                             </td>
                             <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">
                                 {{ number_format($expectedMetersPerBeam, 2) }}m
