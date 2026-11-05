@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\BagPurchase;
 use App\Models\BagTransaction;
-use App\Models\Ledger;
 use App\Models\SizingSlip;
 use App\Models\YarnQuality;
+use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -122,7 +122,7 @@ class BagController extends Controller
         ));
     }
 
-    public function storePurchase(Request $request): RedirectResponse
+    public function storePurchase(Request $request, LedgerPostingService $ledgerPostingService): RedirectResponse
     {
         $validated = $request->validate([
             'challan_no' => 'required|string|max:100',
@@ -150,7 +150,7 @@ class BagController extends Controller
         $totalAmount = $validated['total_bags'] * $validated['rate_per_bag'];
         $validated['total_amount'] = $totalAmount;
 
-        $purchase = DB::transaction(function () use ($validated, $totalAmount): BagPurchase {
+        $purchase = DB::transaction(function () use ($validated, $totalAmount, $ledgerPostingService): BagPurchase {
             $purchase = BagPurchase::create([...$validated, 'total_amount' => $totalAmount]);
 
             foreach ([
@@ -174,16 +174,29 @@ class BagController extends Controller
                 ]);
             }
 
-            Ledger::create([
-                'party_name' => $purchase->supplier_name,
-                'party_type' => 'yarn_supplier',
-                'transaction_date' => $purchase->purchase_date,
-                'voucher_no' => $purchase->challan_no,
-                'description' => "Yarn Purchase: {$purchase->total_bags} bags ({$purchase->quality}) @ Rs. {$purchase->rate_per_bag}",
-                'debit' => 0.00,
-                'credit' => $totalAmount,
-                'balance' => -$totalAmount,
-                'notes' => $purchase->notes,
+            $ledgerPostingService->post('bag_purchase', $purchase->id, [
+                [
+                    'role' => 'supplier',
+                    'party_name' => $purchase->supplier_name,
+                    'party_type' => 'yarn_supplier',
+                    'transaction_date' => $purchase->purchase_date,
+                    'voucher_no' => $purchase->challan_no,
+                    'description' => "Yarn Purchase: {$purchase->total_bags} bags ({$purchase->quality}) @ Rs. {$purchase->rate_per_bag}",
+                    'debit' => 0,
+                    'credit' => $totalAmount,
+                    'notes' => $purchase->notes,
+                ],
+                [
+                    'role' => 'inventory',
+                    'party_name' => 'Yarn Inventory',
+                    'party_type' => 'inventory',
+                    'transaction_date' => $purchase->purchase_date,
+                    'voucher_no' => $purchase->challan_no,
+                    'description' => "Yarn purchased: {$purchase->total_bags} bags ({$purchase->quality})",
+                    'debit' => $totalAmount,
+                    'credit' => 0,
+                    'notes' => $purchase->notes,
+                ],
             ]);
 
             return $purchase;

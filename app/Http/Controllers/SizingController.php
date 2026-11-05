@@ -6,6 +6,7 @@ use App\Models\BagTransaction;
 use App\Models\SizingBeam;
 use App\Models\SizingSlip;
 use App\Models\YarnQuality;
+use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -138,7 +139,7 @@ class SizingController extends Controller
         ));
     }
 
-    public function storeSlip(Request $request): RedirectResponse
+    public function storeSlip(Request $request, LedgerPostingService $ledgerPostingService): RedirectResponse
     {
         $validated = $request->validate([
             'slip_no' => 'required|string|max:100|unique:sizing_slips,slip_no',
@@ -238,7 +239,7 @@ class SizingController extends Controller
         $beamNames = $validated['beam_names'];
         unset($validated['beam_names']);
 
-        $slipResult = DB::transaction(function () use ($validated, $beamNames): SizingSlip|false {
+        $slipResult = DB::transaction(function () use ($validated, $beamNames, $ledgerPostingService): SizingSlip|false {
             $sourceTransaction = BagTransaction::whereKey($validated['bag_transaction_id'])
                 ->whereIn('transaction_type', ['purchase_sizing', 'issue_to_sizing'])
                 ->whereDoesntHave('sizingSlip')
@@ -306,6 +307,33 @@ class SizingController extends Controller
                     'party_name' => $slip->sizing_party,
                     'transaction_date' => $slip->slip_date,
                     'notes' => "Automatic return of unused bags from Sizing Slip {$slip->slip_no}",
+                ]);
+            }
+
+            if ($slip->sizing_bill_amount !== null && (float) $slip->sizing_bill_amount > 0) {
+                $ledgerPostingService->post('sizing_slip', $slip->id, [
+                    [
+                        'role' => 'sizing_mill',
+                        'party_name' => $slip->sizing_party,
+                        'party_type' => 'sizing_mill',
+                        'transaction_date' => $slip->slip_date,
+                        'voucher_no' => $slip->slip_no,
+                        'description' => 'Sizing service bill for '.$slip->slip_no,
+                        'debit' => 0,
+                        'credit' => (float) $slip->sizing_bill_amount,
+                        'notes' => $slip->notes,
+                    ],
+                    [
+                        'role' => 'expense',
+                        'party_name' => 'Sizing Service Expense',
+                        'party_type' => 'expense',
+                        'transaction_date' => $slip->slip_date,
+                        'voucher_no' => $slip->slip_no,
+                        'description' => 'Sizing service expense for '.$slip->slip_no,
+                        'debit' => (float) $slip->sizing_bill_amount,
+                        'credit' => 0,
+                        'notes' => $slip->notes,
+                    ],
                 ]);
             }
 

@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\BagTransaction;
+use App\Models\Customer;
 use App\Models\FabricStock;
+use App\Models\FinancialAccount;
+use App\Models\Invoice;
 use App\Models\Part;
 use App\Models\Production;
 use App\Models\SizingBeam;
@@ -58,6 +61,105 @@ class LoomOperationsTest extends TestCase
             'reference_no' => 'CH-TEST-1',
             'transaction_type' => 'purchase_sizing',
             'quantity_bags' => 60,
+        ]);
+        $this->assertDatabaseHas('ledgers', [
+            'source_type' => 'bag_purchase',
+            'source_id' => 1,
+            'source_role' => 'inventory',
+            'party_name' => 'Yarn Inventory',
+            'debit' => 1400000,
+        ]);
+    }
+
+    public function test_expenses_post_to_payee_and_cash_bank_ledgers_with_running_balances(): void
+    {
+        $account = FinancialAccount::create([
+            'name' => 'Main Cash',
+            'type' => 'cash',
+            'opening_balance' => 1000,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->user)->post(route('expenses.variable.store'), [
+            'title' => 'Generator Fuel',
+            'amount' => 75.50,
+            'expense_date' => now()->toDateString(),
+            'financial_account_id' => $account->id,
+            'payee' => 'Fuel Vendor',
+            'reference' => 'FUEL-1',
+        ])->assertRedirect(route('expenses.index'));
+
+        $this->actingAs($this->user)->post(route('expenses.variable.store'), [
+            'title' => 'Generator Fuel',
+            'amount' => 24.50,
+            'expense_date' => now()->toDateString(),
+            'financial_account_id' => $account->id,
+            'payee' => 'Fuel Vendor',
+            'reference' => 'FUEL-2',
+        ])->assertRedirect(route('expenses.index'));
+
+        $this->assertDatabaseHas('ledgers', [
+            'party_name' => 'Fuel Vendor',
+            'party_type' => 'expense',
+            'voucher_no' => 'FUEL-2',
+            'debit' => 24.50,
+            'balance' => 100.00,
+        ]);
+        $this->assertDatabaseHas('ledgers', [
+            'party_name' => 'Main Cash',
+            'party_type' => 'cash_bank',
+            'voucher_no' => 'FUEL-2',
+            'credit' => 24.50,
+            'balance' => -100.00,
+        ]);
+
+        $this->actingAs($this->user)->get(route('ledgers.index', ['party_type' => 'expense']))
+            ->assertOk()
+            ->assertSee('Fuel Vendor')
+            ->assertSee('Generator Fuel');
+    }
+
+    public function test_invoice_and_customer_receipt_update_customer_and_account_ledgers(): void
+    {
+        $customer = Customer::create(['name' => 'Ledger Customer', 'status' => 'active', 'opening_balance' => 0]);
+        $account = FinancialAccount::create(['name' => 'Receipt Bank', 'type' => 'bank', 'opening_balance' => 0, 'is_active' => true]);
+
+        $this->actingAs($this->user)->post(route('invoices.store'), [
+            'invoice_no' => 'INV-LEDGER-1',
+            'customer_id' => $customer->id,
+            'invoice_date' => now()->toDateString(),
+            'items' => [['description' => 'Fabric', 'quantity' => 10, 'unit' => 'Meter', 'rate' => 100]],
+        ])->assertRedirect(route('invoices.invoices'));
+
+        $invoice = Invoice::where('invoice_no', 'INV-LEDGER-1')->firstOrFail();
+        $this->assertSame(1000.0, (float) $invoice->total);
+
+        $this->actingAs($this->user)->post(route('invoices.payment.store'), [
+            'receipt_no' => 'RCPT-LEDGER-1',
+            'customer_id' => $customer->id,
+            'financial_account_id' => $account->id,
+            'payment_date' => now()->toDateString(),
+            'amount' => 400,
+            'method' => 'bank_transfer',
+            'allocation_mode' => 'invoice',
+            'invoice_id' => $invoice->id,
+        ])->assertRedirect(route('invoices.payments'));
+
+        $this->assertDatabaseHas('ledgers', [
+            'party_name' => 'Ledger Customer',
+            'party_type' => 'fabric_buyer',
+            'source_type' => 'payment_receipt',
+            'source_role' => 'customer',
+            'credit' => 400,
+            'balance' => 600,
+        ]);
+        $this->assertDatabaseHas('ledgers', [
+            'party_name' => 'Receipt Bank',
+            'party_type' => 'cash_bank',
+            'source_type' => 'payment_receipt',
+            'source_role' => 'account',
+            'debit' => 400,
+            'balance' => 400,
         ]);
     }
 
@@ -560,6 +662,18 @@ class LoomOperationsTest extends TestCase
 
         $response->assertRedirect(route('parts.index'));
         $this->assertEquals(8, $part->fresh()->stock_quantity);
+        $this->assertDatabaseHas('ledgers', [
+            'source_type' => 'part_issuance',
+            'source_role' => 'expense',
+            'party_name' => 'Factory Parts Expense',
+            'debit' => 1000,
+        ]);
+        $this->assertDatabaseHas('ledgers', [
+            'source_type' => 'part_issuance',
+            'source_role' => 'inventory',
+            'party_name' => 'Parts Inventory',
+            'credit' => 1000,
+        ]);
     }
 
     public function test_production_calculates_leakage_and_decrements_beam_length(): void
@@ -739,5 +853,23 @@ class LoomOperationsTest extends TestCase
         $this->assertEquals(4000.00, $fabric->fresh()->current_stock_meters);
         $this->assertEquals(4000.00, $fabric->fresh()->available_open_meters);
         $this->assertEquals(40, $fabric->fresh()->total_rolls_in_stock);
+        $this->assertDatabaseHas('ledgers', [
+            'source_type' => 'sale',
+            'source_role' => 'buyer',
+            'party_name' => 'Test Cloth Merchant',
+            'debit' => 0,
+        ]);
+        $this->assertDatabaseHas('ledgers', [
+            'source_type' => 'sale',
+            'source_role' => 'cash',
+            'party_name' => 'Cash / Bank Clearing',
+            'debit' => 249000,
+        ]);
+        $this->assertDatabaseHas('ledgers', [
+            'source_type' => 'sale',
+            'source_role' => 'revenue',
+            'party_name' => 'Fabric Sales Revenue',
+            'credit' => 249000,
+        ]);
     }
 }

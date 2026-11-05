@@ -19,6 +19,10 @@ class Ledger extends Model
         'credit',
         'balance',
         'notes',
+        'source_type',
+        'source_id',
+        'source_role',
+        'is_migrated_legacy',
     ];
 
     protected $casts = [

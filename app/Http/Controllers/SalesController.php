@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\FabricStock;
-use App\Models\Ledger;
 use App\Models\Sale;
 use App\Models\SalesContract;
+use App\Services\LedgerPostingService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,7 +83,7 @@ class SalesController extends Controller
         ));
     }
 
-    public function storeSale(Request $request): RedirectResponse
+    public function storeSale(Request $request, LedgerPostingService $ledgerPostingService): RedirectResponse
     {
         $validated = $request->validate([
             'slip_no' => 'required|string|max:100|unique:sales,slip_no',
@@ -103,7 +103,7 @@ class SalesController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $sale = DB::transaction(function () use ($validated): Sale|false {
+        $sale = DB::transaction(function () use ($validated, $ledgerPostingService): Sale|false {
             $fabric = FabricStock::whereKey($validated['fabric_stock_id'])->lockForUpdate()->firstOrFail();
             $contract = null;
 
@@ -153,17 +153,68 @@ class SalesController extends Controller
 
             $sale = Sale::create($validated);
             $this->syncCustomer($sale->buyer_name, $sale->buyer_phone);
-            Ledger::create([
-                'party_name' => $sale->buyer_name,
-                'party_type' => 'fabric_buyer',
-                'transaction_date' => $sale->sale_date,
-                'voucher_no' => $sale->slip_no,
-                'description' => "Fabric Sale: {$sale->meters_sold}m {$sale->fabric_quality} ({$sale->sale_type})",
-                'debit' => $sale->net_total,
-                'credit' => $sale->payment_status === 'paid' ? $sale->net_total : 0.00,
-                'balance' => $sale->payment_status === 'paid' ? 0.00 : $sale->net_total,
-                'notes' => "Payment Type: {$sale->payment_type}, Status: {$sale->payment_status}",
-            ]);
+            $isPaid = $sale->payment_status === 'paid';
+            $costOfGoodsSold = round((float) $sale->meters_sold * (float) $fabric->unit_cost_meter, 2);
+            $ledgerLines = [
+                [
+                    'role' => 'buyer',
+                    'party_name' => $sale->buyer_name,
+                    'party_type' => 'fabric_buyer',
+                    'transaction_date' => $sale->sale_date,
+                    'voucher_no' => $sale->slip_no,
+                    'description' => "Fabric Sale: {$sale->meters_sold}m {$sale->fabric_quality} ({$sale->sale_type})",
+                    'debit' => $isPaid ? 0 : $sale->net_total,
+                    'credit' => 0,
+                    'notes' => "Payment Type: {$sale->payment_type}, Status: {$sale->payment_status}",
+                ],
+                ...($isPaid ? [[
+                    'role' => 'cash',
+                    'party_name' => 'Cash / Bank Clearing',
+                    'party_type' => 'cash_bank',
+                    'transaction_date' => $sale->sale_date,
+                    'voucher_no' => $sale->slip_no,
+                    'description' => "Payment received for fabric sale {$sale->slip_no}",
+                    'debit' => $sale->net_total,
+                    'credit' => 0,
+                    'notes' => "Payment Type: {$sale->payment_type}",
+                ]] : []),
+                [
+                    'role' => 'revenue',
+                    'party_name' => 'Fabric Sales Revenue',
+                    'party_type' => 'income',
+                    'transaction_date' => $sale->sale_date,
+                    'voucher_no' => $sale->slip_no,
+                    'description' => "Fabric Sale: {$sale->meters_sold}m {$sale->fabric_quality} ({$sale->sale_type})",
+                    'debit' => 0,
+                    'credit' => $sale->net_total,
+                    'notes' => "Payment Type: {$sale->payment_type}, Status: {$sale->payment_status}",
+                ],
+            ];
+            if ($costOfGoodsSold > 0) {
+                $ledgerLines[] = [
+                    'role' => 'cost_of_goods_sold',
+                    'party_name' => 'Cost of Goods Sold',
+                    'party_type' => 'expense',
+                    'transaction_date' => $sale->sale_date,
+                    'voucher_no' => $sale->slip_no,
+                    'description' => 'Cost of fabric sold: '.$sale->fabric_quality,
+                    'debit' => $costOfGoodsSold,
+                    'credit' => 0,
+                    'notes' => null,
+                ];
+                $ledgerLines[] = [
+                    'role' => 'inventory',
+                    'party_name' => 'Finished Fabric Inventory',
+                    'party_type' => 'inventory',
+                    'transaction_date' => $sale->sale_date,
+                    'voucher_no' => $sale->slip_no,
+                    'description' => 'Finished fabric inventory released to sale: '.$sale->fabric_quality,
+                    'debit' => 0,
+                    'credit' => $costOfGoodsSold,
+                    'notes' => null,
+                ];
+            }
+            $ledgerPostingService->post('sale', $sale->id, $ledgerLines);
 
             return $sale;
         });

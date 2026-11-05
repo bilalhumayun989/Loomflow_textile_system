@@ -6,6 +6,7 @@ use App\Models\AccountTransaction;
 use App\Models\Expense;
 use App\Models\FinancialAccount;
 use App\Models\FixedExpense;
+use App\Services\LedgerPostingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -73,7 +74,7 @@ class ExpenseController extends Controller
         return redirect()->route('expenses.index')->with('success', 'Fixed expense setup saved. Record each payment when it is paid.');
     }
 
-    public function storeVariableExpense(Request $request): RedirectResponse
+    public function storeVariableExpense(Request $request, LedgerPostingService $ledgerPostingService): RedirectResponse
     {
         $validated = $request->validate([
             'title' => 'required|string|max:150',
@@ -84,12 +85,12 @@ class ExpenseController extends Controller
             'reference' => 'nullable|string|max:120',
             'notes' => 'nullable|string',
         ]);
-        $this->recordExpense('variable', $validated['title'], null, $validated);
+        $this->recordExpense('variable', $validated['title'], null, $validated, $ledgerPostingService);
 
         return redirect()->route('expenses.index')->with('success', 'Variable expense recorded and deducted from the selected account.');
     }
 
-    public function recordFixedExpense(Request $request, FixedExpense $fixedExpense): RedirectResponse
+    public function recordFixedExpense(Request $request, FixedExpense $fixedExpense, LedgerPostingService $ledgerPostingService): RedirectResponse
     {
         if (! $fixedExpense->is_active) {
             return redirect()->route('expenses.index')->with('error', 'This fixed expense setup is inactive. Activate it before recording a payment.');
@@ -103,7 +104,7 @@ class ExpenseController extends Controller
             'reference' => 'nullable|string|max:120',
             'notes' => 'nullable|string',
         ]);
-        $this->recordExpense('fixed', $fixedExpense->name, $fixedExpense, $validated);
+        $this->recordExpense('fixed', $fixedExpense->name, $fixedExpense, $validated, $ledgerPostingService);
 
         return redirect()->route('expenses.index')->with('success', 'Fixed expense payment recorded and deducted from the selected account.');
     }
@@ -120,9 +121,9 @@ class ExpenseController extends Controller
     /**
      * @param  array<string, mixed>  $validated
      */
-    private function recordExpense(string $type, string $title, ?FixedExpense $fixedExpense, array $validated): void
+    private function recordExpense(string $type, string $title, ?FixedExpense $fixedExpense, array $validated, LedgerPostingService $ledgerPostingService): void
     {
-        DB::transaction(function () use ($type, $title, $fixedExpense, $validated): void {
+        DB::transaction(function () use ($type, $title, $fixedExpense, $validated, $ledgerPostingService): void {
             $account = FinancialAccount::whereKey($validated['financial_account_id'])
                 ->where('is_active', true)
                 ->lockForUpdate()
@@ -147,6 +148,30 @@ class ExpenseController extends Controller
                 'amount' => $amount,
                 'description' => ucfirst($type).' expense: '.$title,
                 'reference' => $expense->reference ?: 'EXP-'.$expense->id,
+            ]);
+            $ledgerPostingService->post('expense', $expense->id, [
+                [
+                    'role' => 'expense',
+                    'party_name' => filled($expense->payee) ? $expense->payee : 'Expense: '.$expense->title,
+                    'party_type' => 'expense',
+                    'transaction_date' => $expense->expense_date,
+                    'voucher_no' => $expense->reference ?: 'EXP-'.$expense->id,
+                    'description' => ucfirst($type).' expense: '.$expense->title,
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'notes' => $expense->notes,
+                ],
+                [
+                    'role' => 'account',
+                    'party_name' => $account->name,
+                    'party_type' => 'cash_bank',
+                    'transaction_date' => $expense->expense_date,
+                    'voucher_no' => $expense->reference ?: 'EXP-'.$expense->id,
+                    'description' => 'Payment for '.$expense->title,
+                    'debit' => 0,
+                    'credit' => $amount,
+                    'notes' => $expense->notes,
+                ],
             ]);
         });
     }
