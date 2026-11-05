@@ -214,7 +214,7 @@ class FabricStockController extends Controller
         $beam = SizingBeam::whereKey($validated['sizing_beam_id'])
             ->where('status', 'mounted_on_loom')
             ->firstOrFail();
-        $beam->fabric_stock_id = $validated['fabric_stock_id'] ?: null;
+        $beam->fabric_stock_id = $validated['fabric_stock_id'] ?? null;
         $beam->save();
 
         return redirect()->route('fabric.index')->with('success', $beam->fabric_stock_id
