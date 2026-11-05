@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProductionController extends Controller
@@ -77,6 +78,7 @@ class ProductionController extends Controller
                 ])
                 ->selectRaw('COUNT(DISTINCT CASE WHEN productions.id IS NOT NULL THEN sizing_beams.id END) as used_beam_count')
                 ->selectRaw('COUNT(DISTINCT productions.loom_no) as loom_count')
+                ->selectRaw('MAX(sizing_slips.total_length_meters * sizing_slips.width_multiplier) as expected_total_meters')
                 ->selectRaw('COALESCE(SUM(productions.expected_fabric_meters), 0) as expected_consumed_meters')
                 ->selectRaw('COALESCE(SUM(productions.net_meters_produced), 0) as actual_woven_meters')
                 ->selectRaw('COALESCE(SUM(productions.leakage_waste_meters), 0) as recorded_leakage_meters')
@@ -218,6 +220,7 @@ class ProductionController extends Controller
             'rolls' => 'required|array|min:1|max:200',
             'rolls.*.loom_no' => 'required|string|max:50',
             'rolls.*.meters' => 'required|numeric|gt:0|max:100000',
+            'rolls.*.beam_meters_consumed' => 'nullable|numeric|gt:0|max:100000',
             'remarks' => 'nullable|string|max:1000',
         ]);
 
@@ -235,23 +238,64 @@ class ProductionController extends Controller
             $closingStock = $previousStock + $receivedTotal + $adjustment - $dispatch;
 
             foreach ($validated['rolls'] as $roll) {
+                $beam = SizingBeam::where('assigned_loom_no', $roll['loom_no'])
+                    ->where('status', 'mounted_on_loom')
+                    ->lockForUpdate()
+                    ->first();
+                $beamMetersConsumed = 0.0;
+                $expectedFabricMeters = 0.0;
+                $leakageMeters = 0.0;
+                $leakagePercentage = 0.0;
+                $efficiencyPercentage = 0.0;
+
+                if ($beam) {
+                    $beam->loadMissing('sizingSlip');
+                    $widthMultiplier = max(0.01, (float) ($beam->sizingSlip?->width_multiplier ?? 1));
+                    $beamMetersConsumed = round((float) ($roll['beam_meters_consumed'] ?? 0), 2);
+
+                    if ($beamMetersConsumed <= 0) {
+                        throw ValidationException::withMessages([
+                            'rolls' => 'Enter the actual warp meters consumed for each loom with a mounted beam so expected cloth can be calculated from its sizing width factor.',
+                        ]);
+                    }
+
+                    if ($beamMetersConsumed > (float) $beam->remaining_length_meters) {
+                        throw ValidationException::withMessages([
+                            'rolls' => 'The production meters exceed the mounted beam length for one of the selected looms. Record the actual meters consumed or finish that beam before saving.',
+                        ]);
+                    }
+
+                    $expectedFabricMeters = round($beamMetersConsumed * $widthMultiplier, 2);
+                    $leakageMeters = max(0, $expectedFabricMeters - (float) $roll['meters']);
+                    $leakagePercentage = $expectedFabricMeters > 0
+                        ? round(($leakageMeters / $expectedFabricMeters) * 100, 2)
+                        : 0;
+                    $beam->remaining_length_meters = round((float) $beam->remaining_length_meters - $beamMetersConsumed, 2);
+                    if ($beam->remaining_length_meters <= 0) {
+                        $beam->remaining_length_meters = 0;
+                        $beam->status = 'exhausted';
+                    }
+                    $beam->save();
+                }
+
                 Production::create([
                     'production_date' => $movementDate,
                     'shift' => 'Day',
                     'loom_no' => $roll['loom_no'],
                     'operator_name' => 'Production register',
+                    'sizing_beam_id' => $beam?->id,
                     'fabric_stock_id' => $fabric->id,
                     'fabric_quality' => $fabric->quality_name,
                     'start_meter' => 0,
                     'end_meter' => $roll['meters'],
                     'net_meters_produced' => $roll['meters'],
-                    'beam_meters_consumed' => 0,
-                    'expected_fabric_meters' => 0,
-                    'leakage_waste_meters' => 0,
-                    'leakage_percentage' => 0,
+                    'beam_meters_consumed' => $beamMetersConsumed,
+                    'expected_fabric_meters' => $expectedFabricMeters,
+                    'leakage_waste_meters' => $leakageMeters,
+                    'leakage_percentage' => $leakagePercentage,
                     'picks_per_inch' => 60,
                     'rpm' => 350,
-                    'efficiency_percentage' => 0,
+                    'efficiency_percentage' => $efficiencyPercentage,
                     'remarks' => $validated['remarks'] ?? null,
                 ]);
             }

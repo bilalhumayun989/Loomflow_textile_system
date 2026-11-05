@@ -338,10 +338,11 @@
                                 $actualWovenMeters = (float) ($bm->productions_sum_net_meters_produced ?? 0);
                                 $beamWidthMultiplier = (float) ($bm->sizingSlip?->width_multiplier ?? 1);
                                 $expectedFabricMeters = (float) $bm->total_length_meters * $beamWidthMultiplier;
+                                $remainingExpectedFabricMeters = (float) $bm->remaining_length_meters * $beamWidthMultiplier;
                                 $expectedConsumedMeters = (float) ($bm->productions_sum_expected_fabric_meters ?? 0);
                                 $productionVarianceMeters = $expectedConsumedMeters - $actualWovenMeters;
                             @endphp
-                            <td class="px-4 py-3 text-right font-mono text-zinc-600">{{ number_format($expectedFabricMeters, 2) }}m</td>
+                            <td class="px-4 py-3 text-right font-mono text-zinc-600">{{ number_format($expectedFabricMeters, 2) }}m<span class="block text-[9px] text-zinc-400">remaining warp can make {{ number_format($remainingExpectedFabricMeters, 2) }}m</span></td>
                             <td class="px-4 py-3 text-right font-mono font-semibold text-zinc-700">{{ number_format($actualWovenMeters, 2) }}m</td>
                             <td class="px-4 py-3 text-right font-mono {{ $productionVarianceMeters >= 0 ? 'text-amber-700' : 'text-emerald-700' }}">
                                 @if(($bm->productions_count ?? 0) > 0)

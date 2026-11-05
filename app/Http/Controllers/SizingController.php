@@ -26,7 +26,7 @@ class SizingController extends Controller
             ->withSum('productions', 'net_meters_produced')
             ->withSum('productions', 'expected_fabric_meters')
             ->withCount('productions')])
-            ->latest('slip_date')->latest('id')->limit(5)->get();
+            ->latest('id')->limit(5)->get();
         $beams = SizingBeam::with(['sizingSlip.beams' => fn ($query) => $query
             ->withSum('productions', 'net_meters_produced')
             ->withSum('productions', 'expected_fabric_meters')
