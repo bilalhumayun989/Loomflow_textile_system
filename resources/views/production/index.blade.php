@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Loom-wise Production & Leakage Analysis')
 
@@ -158,17 +158,103 @@
     <div class="min-w-0 space-y-6">
 
         <section class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <div class="flex items-center justify-between gap-3"><div><h2 class="font-extrabold text-zinc-900">Daily Loom Roll Register</h2><p class="mt-1 text-xs text-zinc-500">Enter each roll by loom and add its total to fabric stock.</p></div><button type="button" onclick="openModal('modalRollRegister')" class="rounded-xl bg-zinc-900 px-4 py-2 text-xs font-bold text-white">Enter daily rolls</button></div>
+            <div class="flex items-center justify-between gap-3"><div><h2 class="font-extrabold text-zinc-900">Production Entries</h2><p class="mt-1 text-xs text-zinc-500">Enter fabric quality, Gazana per roll, and roll quantity for each loom.</p></div><button type="button" onclick="openModal('modalRollRegister')" class="rounded-xl bg-zinc-900 px-4 py-2 text-xs font-bold text-white">Production entry</button></div>
             <div class="mt-4 grid grid-cols-2 gap-3"><label class="text-xs font-semibold">Filter date<input id="rollFilterDate" type="date" class="mt-1 w-full rounded-xl border px-3 py-2" oninput="filterRollRegister()"></label><label class="text-xs font-semibold">Filter quality<input id="rollFilterQuality" type="search" placeholder="Fabric quality" class="mt-1 w-full rounded-xl border px-3 py-2" oninput="filterRollRegister()"></label></div>
-            <div class="mt-4 overflow-x-auto"><table class="w-full text-left text-xs"><thead class="bg-zinc-50 text-[10px] uppercase text-zinc-500"><tr><th class="px-3 py-2">Date</th><th class="px-3 py-2">Quality</th><th class="px-3 py-2">Loom</th><th class="px-3 py-2 text-right">Meters</th></tr></thead><tbody class="divide-y divide-zinc-100">@forelse($productions as $production)<tr data-roll-row data-date="{{ $production->production_date->format('Y-m-d') }}" data-quality="{{ strtolower($production->fabric_quality) }}"><td class="px-3 py-2">{{ $production->production_date->format('d-m-Y') }}</td><td class="px-3 py-2">{{ $production->fabric_quality }}</td><td class="px-3 py-2 font-mono">{{ $production->loom_no }}</td><td class="px-3 py-2 text-right font-mono font-bold">{{ number_format($production->net_meters_produced, 0) }}</td></tr>@empty<tr><td colspan="4" class="px-3 py-6 text-center text-zinc-400">No production entries yet.</td></tr>@endforelse</tbody></table></div>
+            <div class="mt-4 overflow-x-auto"><table class="w-full min-w-[1000px] text-left text-xs"><thead class="bg-zinc-50 text-[10px] uppercase text-zinc-500"><tr><th class="px-3 py-2">Date</th><th class="px-3 py-2">Fabric quality</th><th class="px-3 py-2">Loom</th><th class="px-3 py-2 text-right">Gazana / roll</th><th class="px-3 py-2 text-right">Roll qty</th><th class="px-3 py-2 text-right">Total Gazana</th><th class="px-3 py-2 text-right">Total meters</th><th class="px-3 py-2 text-right">Warp used</th></tr></thead><tbody class="divide-y divide-zinc-100">@forelse($productions as $production)<tr data-roll-row data-date="{{ $production->production_date->format('Y-m-d') }}" data-quality="{{ strtolower($production->fabric_quality) }}"><td class="px-3 py-2">{{ $production->production_date->format('d-m-Y') }}</td><td class="px-3 py-2">{{ $production->fabric_quality }}</td><td class="px-3 py-2 font-mono">{{ $production->loom_no }}</td><td class="px-3 py-2 text-right font-mono">{{ $production->gazana_per_roll !== null ? number_format($production->gazana_per_roll, 2) : '—' }}</td><td class="px-3 py-2 text-right font-mono">{{ $production->roll_quantity ?? '—' }}</td><td class="px-3 py-2 text-right font-mono font-bold">{{ $production->total_gazana !== null ? number_format($production->total_gazana, 2) : '—' }}</td><td class="px-3 py-2 text-right font-mono">{{ number_format($production->net_meters_produced, 2) }}</td><td class="px-3 py-2 text-right font-mono">{{ number_format($production->beam_meters_consumed, 2) }}m</td></tr>@empty<tr><td colspan="8" class="px-3 py-6 text-center text-zinc-400">No production entries yet.</td></tr>@endforelse</tbody></table></div>
         </section>
-        <div id="modalRollRegister" class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-zinc-950/60 p-4"><div class="mx-auto my-8 w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div class="mb-4 flex items-center justify-between"><div><h3 class="font-extrabold">Daily production entry</h3><p class="text-xs text-zinc-500">Add one row for every loom roll.</p></div><button type="button" onclick="closeModal('modalRollRegister')">×</button></div>
-            <form method="POST" action="{{ route('production.store') }}" class="space-y-4">@csrf<div class="grid grid-cols-2 gap-3"><label class="text-xs font-semibold">Date<input name="production_date" type="date" required value="{{ date('Y-m-d') }}" class="mt-1 w-full rounded-xl border px-3 py-2"></label><label class="text-xs font-semibold">Fabric quality<select name="fabric_stock_id" required class="mt-1 w-full rounded-xl border bg-white px-3 py-2"><option value="">Choose quality</option>@foreach($fabricQualities as $quality)<option value="{{ $quality->id }}">{{ $quality->quality_name }}</option>@endforeach</select></label></div><div class="text-[11px] text-zinc-500">For a mounted beam, enter both actual cloth meters and warp meters consumed. Expected cloth = warp consumed × sizing width factor.</div><div class="flex justify-end"><button type="button" onclick="addRollRegisterRow()" class="rounded-xl border px-3 py-2 text-xs font-bold">+ Add roll</button></div><div id="rollRegisterRows" class="space-y-2"><div class="grid grid-cols-[1fr_1fr_1fr_36px] gap-2"><input name="rolls[0][loom_no]" required placeholder="Loom / roll no." class="rounded-xl border px-3 py-2 text-sm"><input name="rolls[0][meters]" required type="number" min="0.01" step="0.01" placeholder="Actual cloth m" oninput="updateRollRegisterTotal()" class="rounded-xl border px-3 py-2 text-right font-mono text-sm"><input name="rolls[0][beam_meters_consumed]" type="number" min="0.01" step="0.01" placeholder="Warp used m" class="rounded-xl border px-3 py-2 text-right font-mono text-sm"><button type="button" onclick="this.parentElement.remove();updateRollRegisterTotal()" class="rounded-xl border">×</button></div></div><div class="flex justify-between border-t pt-3 text-sm"><span>Total actual cloth meters</span><strong id="rollRegisterTotal">0</strong></div><label class="block text-xs font-semibold">Remarks<input name="remarks" class="mt-1 w-full rounded-xl border px-3 py-2"></label><div class="flex justify-end gap-2"><button type="button" onclick="closeModal('modalRollRegister')" class="rounded-xl bg-zinc-100 px-4 py-2 text-xs">Cancel</button><button class="rounded-xl bg-zinc-900 px-4 py-2 text-xs font-bold text-white">Save daily production</button></div></form>
+        <div id="modalRollRegister" class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-zinc-950/60 p-4"><div class="mx-auto my-8 w-full max-w-5xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div class="mb-4 flex items-center justify-between"><div><h3 class="font-extrabold">Production entry</h3><p class="text-xs text-zinc-500">Choose the loom and linked fabric quality, then enter Gazana per roll and roll quantity.</p></div><button type="button" onclick="closeModal('modalRollRegister')">×</button></div>
+            <form method="POST" action="{{ route('production.store') }}" class="space-y-5">
+    @csrf
+    <div class="grid gap-4 sm:grid-cols-[220px_minmax(0,1fr)]">
+        <label class="block text-xs font-bold text-zinc-600">Production date
+            <input name="production_date" type="date" required value="{{ date('Y-m-d') }}" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm">
+        </label>
+        <div class="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
+            <strong>Total Gazana</strong> = Gazana per roll × roll quantity; production meters = total Gazana × 0.9144. For a mounted beam, warp use is calculated from production meters and its sizing width factor.
+        </div>
+    </div>
+    @if($fabricQualities->isEmpty())
+        <a href="{{ route('fabric.index') }}" class="block rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800 underline">Add a fabric quality in Fabric Stock first.</a>
+    @endif
+    <div class="flex items-center justify-between gap-3 border-b pb-2">
+        <div><h4 class="text-sm font-extrabold text-zinc-900">Loom production rows</h4><p class="mt-1 text-xs text-zinc-500">The linked Fabric Stock quality fills automatically for each mounted loom.</p></div>
+        <button type="button" onclick="addRollRegisterRow()" class="shrink-0 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs font-bold hover:bg-zinc-50">+ Add loom</button>
+    </div>
+    <div id="rollRegisterRows" class="space-y-3">
+        <div class="roll-register-row rounded-2xl border border-zinc-200 bg-zinc-50/70 p-3" data-row-index="0">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <label class="block text-xs font-bold text-zinc-600">Loom
+                    <select name="rolls[0][loom_no]" required onchange="updateRollRegisterLoom(this)" class="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm">
+                        <option value="">Choose loom</option>
+                        @foreach($looms as $loom)
+                            <option value="{{ $loom }}" data-running="{{ $mountedBeams->get($loom) ? '1' : '0' }}" data-width-multiplier="{{ $mountedBeams->get($loom)?->sizingSlip?->width_multiplier ?? 0 }}" data-fabric-stock-id="{{ $loomQualityIds[$loom] ?? '' }}">{{ $loom }}{{ $mountedBeams->get($loom) ? ' - Running' : '' }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="block text-xs font-bold text-zinc-600">Fabric quality
+                    <select name="rolls[0][fabric_stock_id]" required data-quality-select onchange="updateRollRegisterRow(this)" class="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm">
+                        <option value="">Choose linked quality</option>
+                        @foreach($fabricQualities as $quality)
+                            <option value="{{ $quality->id }}">{{ $quality->quality_name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="block text-xs font-bold text-zinc-600">Gazana per roll
+                    <input name="rolls[0][gazana_per_roll]" required type="number" min="0.01" step="0.01" placeholder="e.g. 100" oninput="updateRollRegisterRow(this)" class="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-right font-mono text-base">
+                </label>
+                <label class="block text-xs font-bold text-zinc-600">Roll quantity
+                    <input name="rolls[0][quantity]" required type="number" min="1" step="1" placeholder="e.g. 3" oninput="updateRollRegisterRow(this)" class="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-right font-mono text-base">
+                </label>
+                <label class="block text-xs font-bold text-zinc-600">Total Gazana
+                    <input name="rolls[0][total_gazana]" readonly placeholder="0.00" class="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-3 text-right font-mono text-base font-bold text-zinc-800">
+                </label>
+                <div class="flex items-end"><button type="button" onclick="removeRollRegisterRow(this)" class="w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm font-bold text-zinc-600 hover:bg-red-50 hover:text-red-700">Remove loom row</button></div>
+            </div>
+        </div>
+    </div>
+    <div class="grid gap-2 rounded-xl bg-zinc-100 p-3 text-sm sm:grid-cols-2">
+        <span>Total production: <strong id="rollRegisterGazanaTotal" class="font-mono">0.00 Gazana</strong></span>
+        <span>Fabric stock addition: <strong id="rollRegisterMeterTotal" class="font-mono">0.00m</strong></span>
+    </div>
+    <label class="block text-xs font-bold text-zinc-600">Remarks<input name="remarks" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm"></label>
+    <div class="flex justify-end gap-2 border-t pt-4"><button type="button" onclick="closeModal('modalRollRegister')" class="rounded-xl bg-zinc-100 px-4 py-3 text-xs font-bold">Cancel</button><button class="rounded-xl bg-zinc-900 px-5 py-3 text-xs font-bold text-white">Save production</button></div>
+</form>
         </div></div>
         <script>
             let rollRegisterIndex = 1;
-            function addRollRegisterRow() { const i = rollRegisterIndex++; const row = document.createElement('div'); row.className = 'grid grid-cols-[1fr_1fr_1fr_36px] gap-2'; row.innerHTML = `<input name="rolls[${i}][loom_no]" required placeholder="Loom / roll no." class="rounded-xl border px-3 py-2 text-sm"><input name="rolls[${i}][meters]" required type="number" min="0.01" step="0.01" placeholder="Actual cloth m" oninput="updateRollRegisterTotal()" class="rounded-xl border px-3 py-2 text-right font-mono text-sm"><input name="rolls[${i}][beam_meters_consumed]" type="number" min="0.01" step="0.01" placeholder="Warp used m" class="rounded-xl border px-3 py-2 text-right font-mono text-sm"><button type="button" onclick="this.parentElement.remove();updateRollRegisterTotal()" class="rounded-xl border">×</button>`; document.getElementById('rollRegisterRows').appendChild(row); }
-            function updateRollRegisterTotal() { const total = [...document.querySelectorAll('#rollRegisterRows input[name$="[meters]"]')].reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0); document.getElementById('rollRegisterTotal').textContent = total.toFixed(0); }
+
+            function addRollRegisterRow() {
+                const rowsContainer = document.getElementById('rollRegisterRows');
+                const rowIndex = rollRegisterIndex++;
+                const row = rowsContainer.querySelector('.roll-register-row').cloneNode(true);
+                row.dataset.rowIndex = String(rowIndex);
+                row.querySelectorAll('[name]').forEach((field) => {
+                    field.name = field.name.replace(/\[0\]/g, `[${rowIndex}]`);
+                    if (field instanceof HTMLInputElement) { field.value = ''; }
+                    if (field instanceof HTMLSelectElement) { field.selectedIndex = 0; }
+                });
+                row.querySelector('[name$="[loom_no]"]').onchange = function () { updateRollRegisterLoom(this); };
+                rowsContainer.appendChild(row);
+                updateRollRegisterRow(row.querySelector('[name$="[quantity]"]'));
+            }
+            function updateRollRegisterLoom(select) {
+                const row = select.closest('.roll-register-row');
+                const option = select.selectedOptions[0];
+                const qualitySelect = row.querySelector('[data-quality-select]');
+                const qualityId = option?.dataset.fabricStockId || '';
+                qualitySelect.value = [...qualitySelect.options].some((quality) => quality.value === qualityId) ? qualityId : '';
+                qualitySelect.disabled = Boolean(qualityId);
+                qualitySelect.title = qualityId ? 'Using the quality linked to this loom.' : 'No quality is linked to this loom. Link one in Fabric Stock.';
+                updateRollRegisterRow(select);
+            }
+            function removeRollRegisterRow(button) {
+                const rowsContainer = document.getElementById('rollRegisterRows');
+                if (rowsContainer.querySelectorAll('.roll-register-row').length <= 1) { return; }
+                button.closest('.roll-register-row').remove();
+                updateRollRegisterTotal();
+            }
+            function updateRollRegisterRow(input) { const row = input.closest('.roll-register-row'); const gazana = parseFloat(row.querySelector('[name$="[gazana_per_roll]"]').value) || 0; const quantity = parseInt(row.querySelector('[name$="[quantity]"]').value, 10) || 0; const totalGazana = gazana * quantity; row.querySelector('[name$="[total_gazana]"]').value = totalGazana ? totalGazana.toFixed(2) : ''; updateRollRegisterTotal(); }
+            function updateRollRegisterTotal() { const rows = [...document.querySelectorAll('.roll-register-row')]; const totalGazana = rows.reduce((sum, row) => sum + (parseFloat(row.querySelector('[name$="[total_gazana]"]').value) || 0), 0); document.getElementById('rollRegisterGazanaTotal').textContent = `${totalGazana.toFixed(2)} Gazana`; document.getElementById('rollRegisterMeterTotal').textContent = `${(totalGazana * 0.9144).toFixed(2)}m`; }
             function filterRollRegister() { const date = document.getElementById('rollFilterDate').value; const quality = document.getElementById('rollFilterQuality').value.toLowerCase(); document.querySelectorAll('[data-roll-row]').forEach((row) => { row.hidden = (date && row.dataset.date !== date) || (quality && !row.dataset.quality.includes(quality)); }); }
         </script>
 
@@ -205,13 +291,7 @@
             </div>
         </div>
 
-        @if($page === 'leakage')
-            @php
-                $expectedTotal = (float) $sizingSlipProductionRows->sum('expected_total_meters');
-                $actualTotal = (float) $sizingSlipProductionRows->sum('actual_woven_meters');
-                $gapTotal = max(0, $expectedTotal - $actualTotal);
-                $finalLeakageTotal = (float) $beamLeakageRows->where('status', 'exhausted')->sum(fn ($beam) => max(0, ((float) $beam->total_length_meters * (float) ($beam->sizingSlip?->width_multiplier ?? 1)) - (float) ($beam->productions_sum_net_meters_produced ?? 0)));
-            @endphp
+        <?php if ($page === 'leakage') { ?>
             <section class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                     <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -273,7 +353,7 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-zinc-100">
-                                @forelse($beamLeakageRows as $beam)
+                                @foreach($beamLeakageRows as $beam)
                                     @php
                                         $expectedMeters = (float) $beam->total_length_meters * (float) ($beam->sizingSlip?->width_multiplier ?? 1);
                                         $actualMeters = (float) ($beam->productions_sum_net_meters_produced ?? 0);
@@ -293,15 +373,13 @@
                                             <span class="rounded-full px-2.5 py-1 text-[10px] font-bold {{ $isFinished ? 'bg-amber-50 text-amber-800' : 'bg-zinc-100 text-zinc-600' }}">{{ $isFinished ? 'Final leakage' : 'In progress · provisional gap' }}</span>
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr><td colspan="6" class="px-4 py-12 text-center text-zinc-400">No sizing beams exist yet. Create a sizing slip to track expected production.</td></tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
-        @endif
+        <?php } ?>
 
         {{-- KPI Cards (dashboard only) --}}
         @if($page === 'dashboard')

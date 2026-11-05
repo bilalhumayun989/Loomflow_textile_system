@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FabricStock;
 use App\Models\FabricStockMovement;
 use App\Models\SalesContract;
+use App\Models\SizingBeam;
 use App\YarnQualityWeightCalculator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
@@ -54,6 +55,10 @@ class FabricStockController extends Controller
     ): View {
 
         $allFabricQualities = FabricStock::orderBy('quality_name')->get();
+        $mountedBeams = SizingBeam::with('fabricStock')
+            ->where('status', 'mounted_on_loom')
+            ->orderBy('assigned_loom_no')
+            ->get();
         $stockMovements = FabricStockMovement::with('fabricStock')->latest('movement_date')->latest('id')
             ->when($page === 'dashboard', fn ($query) => $query->limit(10))->paginate($page === 'dashboard' ? 10 : 50);
 
@@ -74,6 +79,7 @@ class FabricStockController extends Controller
             'totalRollsInStock',
             'totalInventoryValue',
             'allFabricQualities',
+            'mountedBeams',
             'stockMovements'
         ));
     }
@@ -99,7 +105,15 @@ class FabricStockController extends Controller
             'area' => 'nullable|string|max:100',
             'unit_cost_meter' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
+            'sizing_beam_id' => 'nullable|exists:sizing_beams,id',
         ]);
+
+        if (! empty($validated['sizing_beam_id']) && ! SizingBeam::whereKey($validated['sizing_beam_id'])
+            ->where('status', 'mounted_on_loom')->exists()) {
+            throw ValidationException::withMessages([
+                'sizing_beam_id' => 'Choose a beam that is currently mounted on a loom.',
+            ]);
+        }
 
         $isNew = $validated['quality_mode'] === 'new';
         $received = (float) ($validated['daily_received_meters'] ?? 0);
@@ -179,7 +193,32 @@ class FabricStockController extends Controller
             return $stock;
         });
 
+        if (! empty($validated['sizing_beam_id'])) {
+            SizingBeam::whereKey($validated['sizing_beam_id'])->update(['fabric_stock_id' => $stock->id]);
+
+            return redirect()->route('fabric.index')
+                ->with('success', "{$stock->quality_name} was created/selected and linked to its loom.");
+        }
+
         return redirect()->route('fabric.index')
             ->with('success', "Stock updated for {$stock->quality_name}: {$stock->current_stock_meters}m closing balance.");
+    }
+
+    public function updateLoomFabricQuality(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'sizing_beam_id' => 'required|exists:sizing_beams,id',
+            'fabric_stock_id' => 'nullable|exists:fabric_stocks,id',
+        ]);
+
+        $beam = SizingBeam::whereKey($validated['sizing_beam_id'])
+            ->where('status', 'mounted_on_loom')
+            ->firstOrFail();
+        $beam->fabric_stock_id = $validated['fabric_stock_id'] ?: null;
+        $beam->save();
+
+        return redirect()->route('fabric.index')->with('success', $beam->fabric_stock_id
+            ? "Fabric quality linked to {$beam->assigned_loom_no}."
+            : "Fabric quality unlinked from {$beam->assigned_loom_no}.");
     }
 }

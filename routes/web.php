@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/fabric-stock/inventory', [FabricStockController::class, 'inventory'])->name('fabric.inventory');
     Route::get('/fabric-stock/contracts', [FabricStockController::class, 'contracts'])->name('fabric.contracts');
     Route::post('/fabric-stock', [FabricStockController::class, 'storeStock'])->name('fabric.store');
+    Route::post('/fabric-stock/loom-quality', [FabricStockController::class, 'updateLoomFabricQuality'])->name('fabric.loom-quality');
 
     // 5. Sales (Sales slips, open market sales, multi-quality contracts)
     Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');

@@ -159,8 +159,68 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     + Add Quality Spec
                 </button>
+                <button type="button" onclick="openModal('modalLinkLoomQuality')"
+                        class="px-3.5 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold transition-colors flex items-center gap-1.5">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-2 2a4 4 0 01-5.656-5.656l1-1m3.656-2.172a4 4 0 010-5.656l2-2a4 4 0 015.656 5.656l-1 1M8 12h8"/></svg>
+                    Link Loom Quality
+                </button>
             </div>
         </div>
+
+    <div id="modalLinkLoomQuality" class="fixed inset-0 z-50 hidden overflow-y-auto bg-zinc-950/60 p-4 sm:p-6">
+        <div class="mx-auto my-8 w-full max-w-2xl rounded-3xl border border-zinc-200 bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
+                <div><h3 class="text-base font-extrabold text-zinc-900">Link Fabric Quality to Loom</h3><p class="mt-1 text-xs text-zinc-500">Choose a mounted loom, then link an existing fabric quality or create a new one.</p></div>
+                <button type="button" onclick="closeModal('modalLinkLoomQuality')" class="rounded-lg px-3 py-2 text-zinc-500 hover:bg-zinc-100">×</button>
+            </div>
+            <form id="linkLoomQualityForm" method="POST" action="{{ route('fabric.loom-quality') }}" onsubmit="return submitLoomFabricQuality()" class="space-y-4 px-6 py-5">
+                @csrf
+                <label class="block text-xs font-bold text-zinc-600">Mounted loom
+                    <select id="linkSizingBeamId" name="sizing_beam_id" required class="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm">
+                        <option value="">Choose mounted loom</option>
+                        @foreach($mountedBeams as $beam)
+                            <option value="{{ $beam->id }}">{{ $beam->assigned_loom_no }} · {{ $beam->beam_no }}{{ $beam->fabricStock ? ' · '.$beam->fabricStock->quality_name : ' · No quality linked' }}</option>
+                        @endforeach
+                    </select>
+                    @if($mountedBeams->isEmpty())<span class="mt-1 block text-amber-700">Mount a sizing beam before linking a loom quality.</span>@endif
+                </label>
+                <label class="block text-xs font-bold text-zinc-600">Action
+                    <select id="linkQualityMode" name="quality_mode" onchange="toggleLoomLinkQualityMode()" class="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm">
+                        <option value="existing">Link an existing Fabric Stock quality</option>
+                        <option value="new">Create a new quality and link it</option>
+                        <option value="unlink">Unlink current quality</option>
+                    </select>
+                </label>
+                <div id="linkExistingQualityFields">
+                    <label class="block text-xs font-bold text-zinc-600">Fabric quality
+                        <select id="linkFabricStockId" name="fabric_stock_id" class="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm">
+                            <option value="">Choose Fabric Stock quality</option>
+                            @foreach($allFabricQualities as $quality)
+                                <option value="{{ $quality->id }}">{{ $quality->quality_name }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+                <div id="linkNewQualityFields" class="hidden space-y-3">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="text-xs font-bold text-zinc-600">New quality name<input id="linkNewQualityName" name="quality_name" placeholder="e.g. 90 x 70 - 43 inch" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm"></label>
+                        <label class="text-xs font-bold text-zinc-600">Construction<input name="construction" placeholder="e.g. 52x52 / 72x78" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm"></label>
+                        <label class="text-xs font-bold text-zinc-600">Read (ends per inch)<input id="linkRead" name="read" type="number" min="0.0001" step="0.0001" oninput="calculateLinkFabricWeight()" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm"></label>
+                        <label class="text-xs font-bold text-zinc-600">Pick (picks per inch)<input id="linkPick" name="pick" type="number" min="0.0001" step="0.0001" oninput="calculateLinkFabricWeight()" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm"></label>
+                        <label class="text-xs font-bold text-zinc-600">Warp yarn count<input id="linkWarpCount" name="warp_count" type="number" min="0.0001" step="0.0001" oninput="calculateLinkFabricWeight()" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm"></label>
+                        <label class="text-xs font-bold text-zinc-600">Weft yarn count<input id="linkWeftCount" name="weft_count" type="number" min="0.0001" step="0.0001" oninput="calculateLinkFabricWeight()" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm"></label>
+                        <label class="text-xs font-bold text-zinc-600">Width (inches)<input id="linkWidth" name="width_inches" type="number" min="20" max="150" step="0.01" value="63" oninput="calculateLinkFabricWeight()" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm"></label>
+                        <label class="text-xs font-bold text-zinc-600">Rate per meter<input name="unit_cost_meter" type="number" min="0" step="0.01" value="0" class="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-3 text-sm"></label>
+                    </div>
+                    <div class="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600">New quality specifications and weight are saved to Fabric Stock. It starts with zero stock. Total fabric weight: <strong id="linkWeightPreview">0.0000 lb/m</strong></div>
+                </div>
+                <div class="flex justify-end gap-2 border-t pt-4">
+                    <button type="button" onclick="closeModal('modalLinkLoomQuality')" class="rounded-xl bg-zinc-100 px-4 py-3 text-xs font-bold">Cancel</button>
+                    <button id="saveLoomQualityButton" {{ $mountedBeams->isEmpty() ? 'disabled' : '' }} class="rounded-xl bg-blue-700 px-5 py-3 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Save link</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
         {{-- KPI Cards (dashboard only) --}}
         @if($page === 'dashboard')
@@ -195,7 +255,6 @@
             </div>
         </div>
         @endif
-
 
         {{-- ============================================================
              SECTION 1 — Fabric Inventory Table
@@ -400,5 +459,8 @@
 function toggleFabricQualityMode(){const isNew=document.getElementById('qualityMode').value==='new';document.getElementById('existingQualityFields').classList.toggle('hidden',isNew);document.getElementById('newQualityFields').classList.toggle('hidden',!isNew);document.getElementById('existingFabricQuality').required=!isNew;document.getElementById('newQualityName').required=isNew;['fabricRead','fabricPick','fabricWarpCount','fabricWeftCount','fabricWidthInches'].forEach((id)=>{document.getElementById(id).required=isNew});document.getElementById('previousStockMeters').value='0';if(!isNew){fillExistingFabricStock()}}
 function fillExistingFabricStock(){const option=document.getElementById('existingFabricQuality').selectedOptions[0];document.getElementById('previousStockMeters').value=option?.dataset.stock||'0';document.getElementById('stockArea').value=option?.dataset.area||''}
 function calculateFabricWeightPerMeter(){const read=parseFloat(document.getElementById('fabricRead').value)||0;const pick=parseFloat(document.getElementById('fabricPick').value)||0;const width=parseFloat(document.getElementById('fabricWidthInches').value)||0;const warpCount=parseFloat(document.getElementById('fabricWarpCount').value)||0;const weftCount=parseFloat(document.getElementById('fabricWeftCount').value)||0;const truncate4=(value)=>Math.trunc(value*10000)/10000;const warpWeight=read>0&&width>0&&warpCount>0?truncate4(read*width/warpCount/20*1.0936/40):0;const weftWeight=pick>0&&width>0&&weftCount>0?truncate4(pick*width/weftCount/20*1.0936/40):0;document.getElementById('fabricWarpWeightPreview').textContent=warpWeight.toFixed(4);document.getElementById('fabricWeftWeightPreview').textContent=weftWeight.toFixed(4);document.getElementById('fabricTotalWeightPreview').textContent=(warpWeight+weftWeight).toFixed(4)}
+function toggleLoomLinkQualityMode(){const mode=document.getElementById('linkQualityMode').value;const isNew=mode==='new';const isUnlink=mode==='unlink';const existing=document.getElementById('linkExistingQualityFields');const newFields=document.getElementById('linkNewQualityFields');const qualitySelect=document.getElementById('linkFabricStockId');const newQualityName=document.getElementById('linkNewQualityName');const form=document.getElementById('linkLoomQualityForm');const button=document.getElementById('saveLoomQualityButton');existing.classList.toggle('hidden',isNew||isUnlink);newFields.classList.toggle('hidden',!isNew);qualitySelect.required=!isNew&&!isUnlink;qualitySelect.disabled=isNew||isUnlink;newQualityName.required=isNew;['linkRead','linkPick','linkWarpCount','linkWeftCount','linkWidth'].forEach((id)=>{document.getElementById(id).required=isNew});form.action=isNew?"{{ route('fabric.store') }}":"{{ route('fabric.loom-quality') }}";button.textContent=isNew?'Create quality & link':(isUnlink?'Unlink quality':'Save quality link')}
+function calculateLinkFabricWeight(){const read=parseFloat(document.getElementById('linkRead').value)||0;const pick=parseFloat(document.getElementById('linkPick').value)||0;const width=parseFloat(document.getElementById('linkWidth').value)||0;const warpCount=parseFloat(document.getElementById('linkWarpCount').value)||0;const weftCount=parseFloat(document.getElementById('linkWeftCount').value)||0;const truncate4=(value)=>Math.trunc(value*10000)/10000;const warp=read>0&&width>0&&warpCount>0?truncate4(read*width/warpCount/20*1.0936/40):0;const weft=pick>0&&width>0&&weftCount>0?truncate4(pick*width/weftCount/20*1.0936/40):0;document.getElementById('linkWeightPreview').textContent=(warp+weft).toFixed(4)+' lb/m'}
+function submitLoomFabricQuality(){const beamId=document.getElementById('linkSizingBeamId').value;const mode=document.getElementById('linkQualityMode').value;if(!beamId){return false}if(mode==='new'){return true}return mode==='unlink'||Boolean(document.getElementById('linkFabricStockId').value)}
 </script>
 @endsection

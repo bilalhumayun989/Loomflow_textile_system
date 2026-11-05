@@ -13,6 +13,7 @@ class SizingBeam extends Model
 
     protected $fillable = [
         'sizing_slip_id',
+        'fabric_stock_id',
         'beam_no',
         'beam_name',
         'yarn_quality',
@@ -33,6 +34,11 @@ class SizingBeam extends Model
     public function sizingSlip(): BelongsTo
     {
         return $this->belongsTo(SizingSlip::class);
+    }
+
+    public function fabricStock(): BelongsTo
+    {
+        return $this->belongsTo(FabricStock::class);
     }
 
     public function productions(): HasMany
