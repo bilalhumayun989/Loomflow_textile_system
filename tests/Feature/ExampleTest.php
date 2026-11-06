@@ -48,6 +48,10 @@ class ExampleTest extends TestCase
         $response->assertSeeText('Fabric Stock');
         $response->assertSeeText('Sales');
         $response->assertSeeText('Production');
+        $response->assertSeeText('Loom & Contract Flow');
+        $response->assertSeeText('Running loom + quality');
+        $response->assertSeeText('Active contract quantities');
+        $response->assertSeeText('Unchecked / checked / accepted not recorded');
 
         // Bags Module
         $response = $this->get('/bags');

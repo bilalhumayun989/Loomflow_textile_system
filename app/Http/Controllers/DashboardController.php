@@ -6,6 +6,7 @@ use App\Models\BagPurchase;
 use App\Models\BagTransaction;
 use App\Models\Expense;
 use App\Models\FabricStock;
+use App\Models\FabricStockMovement;
 use App\Models\Part;
 use App\Models\Production;
 use App\Models\Sale;
@@ -55,6 +56,27 @@ class DashboardController extends Controller
         $avgEfficiency = Production::avg('efficiency_percentage') ?? 87.5;
         $totalLeakageMeters = Production::sum('leakage_waste_meters');
 
+        // The current register tracks loom output and sales dispatch, but not inspection stages or job-work receipts.
+        $runningLooms = SizingBeam::with('fabricStock')
+            ->where('status', 'mounted_on_loom')
+            ->orderBy('assigned_loom_no')
+            ->get();
+        $activeContractRows = SalesContract::with('fabricStock')
+            ->where('status', 'active')
+            ->orderBy('end_date')
+            ->get();
+        $contractDispatchedMeters = Sale::whereNotNull('sales_contract_id')
+            ->selectRaw('sales_contract_id, SUM(meters_sold) as dispatched_meters')
+            ->groupBy('sales_contract_id')
+            ->pluck('dispatched_meters', 'sales_contract_id');
+        $contractProductionMeters = Production::query()
+            ->join('fabric_stocks', 'productions.fabric_stock_id', '=', 'fabric_stocks.id')
+            ->selectRaw('fabric_stocks.id as fabric_stock_id, SUM(productions.net_meters_produced) as produced_meters')
+            ->groupBy('fabric_stocks.id')
+            ->pluck('produced_meters', 'fabric_stock_id');
+        $jobWorkBalanceMeters = (float) FabricStockMovement::sum('received_meters')
+            - (float) FabricStockMovement::sum('dispatch_meters');
+
         // Recent items for live feed
         $recentPurchases = BagPurchase::latest()->take(3)->get();
         $recentProductions = Production::latest()->take(3)->get();
@@ -79,6 +101,11 @@ class DashboardController extends Controller
             'totalProductionMeters',
             'avgEfficiency',
             'totalLeakageMeters',
+            'runningLooms',
+            'activeContractRows',
+            'contractDispatchedMeters',
+            'contractProductionMeters',
+            'jobWorkBalanceMeters',
             'recentPurchases',
             'recentProductions',
             'recentSales'

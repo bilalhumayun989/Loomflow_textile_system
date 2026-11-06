@@ -12,6 +12,91 @@
         </h1>
     </div>
 
+    <section class="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h2 class="text-xl font-extrabold tracking-tight text-zinc-900">Loom & Contract Flow</h2>
+                <p class="mt-1 text-sm text-zinc-500">Current running looms, active contract progress, dispatches, and recorded stock movement.</p>
+            </div>
+            <a href="{{ route('production.loom-summary') }}" class="text-xs font-bold text-zinc-600 hover:text-zinc-900">Open loom summary →</a>
+        </div>
+
+        <div class="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div class="rounded-2xl bg-zinc-50 p-4">
+                <span class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Running looms</span>
+                <strong class="mt-1 block text-2xl font-black text-zinc-900">{{ $runningLooms->count() }}</strong>
+            </div>
+            <div class="rounded-2xl bg-zinc-50 p-4">
+                <span class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Active contracts</span>
+                <strong class="mt-1 block text-2xl font-black text-zinc-900">{{ $activeContractRows->count() }}</strong>
+            </div>
+            <div class="rounded-2xl bg-zinc-50 p-4">
+                <span class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Job-work stock balance*</span>
+                <strong class="mt-1 block text-2xl font-black text-zinc-900">{{ number_format($jobWorkBalanceMeters, 2) }}m</strong>
+            </div>
+            <div class="rounded-2xl bg-zinc-50 p-4">
+                <span class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Quality stages</span>
+                <strong class="mt-1 block text-sm font-extrabold text-amber-700">Unchecked / checked / accepted not recorded</strong>
+            </div>
+        </div>
+
+        <div class="mt-6 grid gap-6 lg:grid-cols-2">
+            <div>
+                <h3 class="mb-3 text-sm font-extrabold text-zinc-800">Running loom + quality</h3>
+                <div class="overflow-x-auto rounded-2xl border border-zinc-200">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-zinc-50 text-[10px] uppercase tracking-wide text-zinc-500">
+                            <tr><th class="px-3 py-2.5">Loom</th><th class="px-3 py-2.5">Beam</th><th class="px-3 py-2.5">Fabric quality</th><th class="px-3 py-2.5 text-right">Beam left</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100">
+                            @forelse($runningLooms as $beam)
+                                <tr>
+                                    <td class="px-3 py-3 font-bold text-zinc-800">{{ $beam->assigned_loom_no ?: 'Unassigned' }}</td>
+                                    <td class="px-3 py-3 text-zinc-600">{{ $beam->beam_no }}</td>
+                                    <td class="px-3 py-3 text-zinc-600">{{ $beam->fabricStock?->quality_name ?? 'Quality not linked' }}</td>
+                                    <td class="px-3 py-3 text-right tabular-nums text-zinc-700">{{ number_format((float) $beam->remaining_length_meters, 2) }}m</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="px-3 py-6 text-center text-zinc-400">No beams are currently mounted on looms.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="mb-3 text-sm font-extrabold text-zinc-800">Active contract quantities</h3>
+                <div class="overflow-x-auto rounded-2xl border border-zinc-200">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-zinc-50 text-[10px] uppercase tracking-wide text-zinc-500">
+                            <tr><th class="px-3 py-2.5">Contract / quality</th><th class="px-3 py-2.5 text-right">Contract</th><th class="px-3 py-2.5 text-right">Produced*</th><th class="px-3 py-2.5 text-right">Dispatched</th><th class="px-3 py-2.5 text-right">Remaining</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100">
+                            @forelse($activeContractRows as $contract)
+                                @php
+                                    $dispatchedMeters = (float) ($contractDispatchedMeters[$contract->id] ?? 0);
+                                    $remainingMeters = max(0, (float) $contract->total_meters - $dispatchedMeters);
+                                    $producedMeters = $contract->fabric_stock_id ? (float) ($contractProductionMeters[$contract->fabric_stock_id] ?? 0) : null;
+                                @endphp
+                                <tr>
+                                    <td class="px-3 py-3"><span class="font-bold text-zinc-800">{{ $contract->contract_no }}</span><span class="block text-zinc-500">{{ $contract->fabricStock?->quality_name ?? $contract->fabric_quality }}</span></td>
+                                    <td class="px-3 py-3 text-right tabular-nums text-zinc-700">{{ number_format((float) $contract->total_meters, 0) }}m</td>
+                                    <td class="px-3 py-3 text-right tabular-nums text-zinc-700">{{ $producedMeters === null ? '—' : number_format($producedMeters, 0).'m' }}</td>
+                                    <td class="px-3 py-3 text-right tabular-nums text-zinc-700">{{ number_format($dispatchedMeters, 0) }}m</td>
+                                    <td class="px-3 py-3 text-right tabular-nums font-bold text-zinc-800">{{ number_format($remainingMeters, 0) }}m</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="5" class="px-3 py-6 text-center text-zinc-400">No active contracts.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <p class="mt-4 text-[11px] leading-relaxed text-zinc-500">* Produced is total production for the contract’s linked fabric quality, not a reserved contract allocation. Job-work balance is recorded stock receipts less recorded dispatches across all qualities. The app does not yet capture unchecked, checked, accepted, or party-specific job-work quantities.</p>
+    </section>
+
     <!-- THE 6 MAIN BOXES -->
     <div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
